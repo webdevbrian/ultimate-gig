@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import type { Song, UgTabResponse } from "@/lib/models";
@@ -17,6 +17,13 @@ export default function SongDetailPage() {
   const [tab, setTab] = useState<UgTabResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const [autoScroll, setAutoScroll] = useState(false);
+  // Scroll speed multiplier, 0.1x – 3.0x in 0.1 increments.
+  // 1.0x is calibrated to feel like the old 0.3 speed.
+  const [scrollSpeed, setScrollSpeed] = useState(1); // default 1.0x
+  const [controlsCollapsed, setControlsCollapsed] = useState(false);
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
 
   const song = useMemo(
     () => songs.find((s) => s.id === songId),
@@ -76,6 +83,57 @@ export default function SongDetailPage() {
     [tab?.content],
   );
 
+  // Simple vertical auto-scroll for the tab text. Speed is a scalar
+  // (0.1x–3.0x) applied to a base pixels-per-second value.
+  useEffect(() => {
+    if (!autoScroll) return undefined;
+
+    const container = scrollContainerRef.current;
+    if (!container) return undefined;
+
+    let animationFrameId: number;
+    let lastTime: number | null = null;
+    let accumulator = 0; // fractional pixels carried between frames
+
+    // Base scroll speed in pixels/second at 1.0x. This is chosen so that
+    // 1.0x feels like the previous 0.3 setting (~9 px/sec).
+    const basePixelsPerSecond = 9;
+
+    const step = (timestamp: number) => {
+      if (!scrollContainerRef.current) return;
+
+      if (lastTime == null) {
+        lastTime = timestamp;
+      }
+
+      const deltaMs = timestamp - lastTime;
+      lastTime = timestamp;
+
+      const pixelsPerSecond = basePixelsPerSecond * scrollSpeed;
+      const deltaPx = (pixelsPerSecond * deltaMs) / 1000;
+
+      accumulator += deltaPx;
+      const wholePixels = Math.floor(accumulator);
+      if (wholePixels > 0) {
+        scrollContainerRef.current.scrollTop += wholePixels;
+        accumulator -= wholePixels;
+      }
+
+      // Stop when we've reached the bottom.
+      const { scrollTop, scrollHeight, clientHeight } =
+        scrollContainerRef.current;
+      if (scrollTop + clientHeight >= scrollHeight) return;
+
+      animationFrameId = window.requestAnimationFrame(step);
+    };
+
+    animationFrameId = window.requestAnimationFrame(step);
+
+    return () => {
+      if (animationFrameId) window.cancelAnimationFrame(animationFrameId);
+    };
+  }, [autoScroll, scrollSpeed, rawTabText]);
+
   if (!song) {
     return (
       <div className="space-y-4">
@@ -101,51 +159,101 @@ export default function SongDetailPage() {
         >
           {playlistId ? "Back to playlist" : "Back to playlists"}
         </Link>
-        <div className="space-y-1">
-          <h1 className="text-2xl font-semibold tracking-tight">{song.title}</h1>
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">{song.artist}</p>
-          {song.ugTabType ? (
-            <p className="text-xs text-zinc-500 dark:text-zinc-500">
-              Ultimate Guitar · {song.ugTabType}
-            </p>
-          ) : null}
-          {(tab?.tuningName || tab?.tuningValue) && (
-            <p className="text-xs text-zinc-500 dark:text-zinc-500">
-              Tuning: {tab?.tuningValue || tab?.tuningName}
-            </p>
-          )}
-        </div>
+        {!controlsCollapsed && (
+          <div className="space-y-1">
+            <h1 className="text-2xl font-semibold tracking-tight">{song.title}</h1>
+            <p className="text-sm text-zinc-600 dark:text-zinc-400">{song.artist}</p>
+            {song.ugTabType ? (
+              <p className="text-xs text-zinc-500 dark:text-zinc-500">
+                Ultimate Guitar · {song.ugTabType}
+              </p>
+            ) : null}
+            {(tab?.tuningName || tab?.tuningValue) && (
+              <p className="text-xs text-zinc-500 dark:text-zinc-500">
+                Tuning: {tab?.tuningValue || tab?.tuningName}
+              </p>
+            )}
+          </div>
+        )}
       </div>
 
       <section className="space-y-3 rounded-lg border border-black/5 bg-white/80 p-4 text-sm shadow-sm dark:border-white/10 dark:bg-black/60">
-        {isLoading ? (
-          <p className="text-xs text-zinc-500 dark:text-zinc-500">
-            Loading tab from Ultimate Guitar…
-          </p>
-        ) : error ? (
-          <div className="space-y-2">
-            <p className="text-xs font-medium text-red-600 dark:text-red-400">{error}</p>
-            <p className="text-xs text-zinc-500 dark:text-zinc-500">
-              You can also open this song directly on Ultimate Guitar:
-            </p>
-            <a
-              href={song.ugTabUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="text-xs font-medium text-blue-600 hover:underline dark:text-blue-400"
-            >
-              {song.ugTabUrl}
-            </a>
+        <div className="flex flex-wrap items-center justify-between gap-3 text-[11px] text-zinc-600 dark:text-zinc-400">
+          <button
+            type="button"
+            onClick={() => setControlsCollapsed((prev) => !prev)}
+            className="rounded border border-zinc-300 bg-white px-2 py-0.5 text-[11px] font-medium text-zinc-700 shadow-sm hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
+          >
+            {controlsCollapsed ? "Show header" : "Hide header"}
+          </button>
+
+          <div className="flex flex-wrap items-center gap-3">
+            <label className="inline-flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={autoScroll}
+                onChange={(event) => setAutoScroll(event.target.checked)}
+                className="h-3 w-3 rounded border-zinc-400 text-zinc-900 shadow-sm focus:ring-0 dark:border-zinc-600 dark:bg-black"
+              />
+              <span>Auto-scroll</span>
+            </label>
+            <div className="flex items-center gap-2">
+              <span>Speed</span>
+              <select
+                value={scrollSpeed}
+                onChange={(event) =>
+                  setScrollSpeed(Number.parseFloat(event.target.value) || 0.1)
+                }
+                disabled={!autoScroll}
+                className="h-6 rounded border border-zinc-300 bg-white px-1 text-[11px] text-zinc-700 shadow-sm focus:outline-none focus:ring-1 focus:ring-zinc-400 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:focus:ring-zinc-500"
+              >
+                {Array.from({ length: 30 }, (_, index) =>
+                  Number(((index + 1) * 0.1).toFixed(1)),
+                ).map((value) => (
+                  <option key={value} value={value}>{`${value.toFixed(1)}x`}</option>
+                ))}
+              </select>
+            </div>
           </div>
-        ) : rawTabText ? (
-          <pre className="font-mono text-xs whitespace-pre text-zinc-900 dark:text-zinc-100">
-            {rawTabText}
-          </pre>
-        ) : (
-          <p className="text-xs text-zinc-500 dark:text-zinc-500">
-            No tab content available.
-          </p>
-        )}
+        </div>
+
+        <div
+          ref={scrollContainerRef}
+          className={`overflow-y-auto pt-2 ${
+            controlsCollapsed
+              ? "max-h-[calc(100vh-9rem)]"
+              : "max-h-[calc(100vh-13rem)]"
+          }`}
+        >
+          {isLoading ? (
+            <p className="text-xs text-zinc-500 dark:text-zinc-500">
+              Loading tab from Ultimate Guitar…
+            </p>
+          ) : error ? (
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-red-600 dark:text-red-400">{error}</p>
+              <p className="text-xs text-zinc-500 dark:text-zinc-500">
+                You can also open this song directly on Ultimate Guitar:
+              </p>
+              <a
+                href={song.ugTabUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="text-xs font-medium text-blue-600 hover:underline dark:text-blue-400"
+              >
+                {song.ugTabUrl}
+              </a>
+            </div>
+          ) : rawTabText ? (
+            <pre className="font-mono text-xs whitespace-pre text-zinc-900 dark:text-zinc-100">
+              {rawTabText}
+            </pre>
+          ) : (
+            <p className="text-xs text-zinc-500 dark:text-zinc-500">
+              No tab content available.
+            </p>
+          )}
+        </div>
       </section>
     </div>
   );
