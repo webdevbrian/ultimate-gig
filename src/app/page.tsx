@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo, useState, type MouseEvent as ReactMouseEvent } from "react";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import type {
   Playlist,
@@ -11,6 +11,9 @@ import type {
 } from "@/lib/models";
 
 type SortKey = "importedAt" | "name";
+
+type PlaylistColumnKey = "playlist" | "imported" | "lastSynced" | "songs" | "actions";
+type PlaylistColumnWidths = Record<PlaylistColumnKey, number>;
 
 export default function Home() {
   const [playlists, setPlaylists] = useLocalStorage<Playlist[]>(
@@ -36,6 +39,17 @@ export default function Home() {
   const [sortDir, setSortDir] = useLocalStorage<"asc" | "desc">(
     "ultimate-gig:playlists:sort-dir",
     "desc",
+  );
+
+  const [columnWidths, setColumnWidths] = useLocalStorage<PlaylistColumnWidths>(
+    "ultimate-gig:playlists:column-widths",
+    {
+      playlist: 260,
+      imported: 160,
+      lastSynced: 180,
+      songs: 90,
+      actions: 110,
+    },
   );
 
   const visiblePlaylists = useMemo(() => {
@@ -208,6 +222,35 @@ export default function Home() {
     });
   }
 
+  function handleColumnResizeStart(
+    key: PlaylistColumnKey,
+    event: ReactMouseEvent<HTMLDivElement>,
+  ) {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const startX = event.clientX;
+    const startWidth = columnWidths[key] ?? 120;
+    const minWidth = 80;
+
+    const handleMove = (moveEvent: MouseEvent) => {
+      const deltaX = moveEvent.clientX - startX;
+      const nextWidth = Math.max(minWidth, Math.round(startWidth + deltaX));
+      setColumnWidths((current) => ({
+        ...current,
+        [key]: nextWidth,
+      }));
+    };
+
+    const handleUp = () => {
+      window.removeEventListener("mousemove", handleMove);
+      window.removeEventListener("mouseup", handleUp);
+    };
+
+    window.addEventListener("mousemove", handleMove);
+    window.addEventListener("mouseup", handleUp);
+  }
+
   return (
     <div className="space-y-6">
       <section className="space-y-1">
@@ -306,11 +349,68 @@ export default function Home() {
             <table className="min-w-full border-separate border-spacing-0">
               <thead className="bg-black/5 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:bg-white/5 dark:text-zinc-400">
                 <tr>
-                  <th className="px-4 py-2">Playlist</th>
-                  <th className="px-4 py-2">Imported</th>
-                  <th className="px-4 py-2">Last synced</th>
-                  <th className="px-4 py-2 text-right">Songs</th>
-                  <th className="px-4 py-2 text-right">Actions</th>
+                  <th
+                    className="px-4 py-2 relative"
+                    style={{ width: columnWidths.playlist }}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span>Playlist</span>
+                      <div
+                        className="h-4 w-[6px] cursor-col-resize bg-zinc-300 hover:bg-zinc-500 dark:bg-zinc-600 dark:hover:bg-zinc-300"
+                        onMouseDown={(event) =>
+                          handleColumnResizeStart("playlist", event)
+                        }
+                      />
+                    </div>
+                  </th>
+                  <th
+                    className="px-4 py-2 relative"
+                    style={{ width: columnWidths.imported }}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span>Imported</span>
+                      <div
+                        className="h-4 w-[6px] cursor-col-resize bg-zinc-300 hover:bg-zinc-500 dark:bg-zinc-600 dark:hover:bg-zinc-300"
+                        onMouseDown={(event) =>
+                          handleColumnResizeStart("imported", event)
+                        }
+                      />
+                    </div>
+                  </th>
+                  <th
+                    className="px-4 py-2 relative"
+                    style={{ width: columnWidths.lastSynced }}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span>Last synced</span>
+                      <div
+                        className="h-4 w-[6px] cursor-col-resize bg-zinc-300 hover:bg-zinc-500 dark:bg-zinc-600 dark:hover:bg-zinc-300"
+                        onMouseDown={(event) =>
+                          handleColumnResizeStart("lastSynced", event)
+                        }
+                      />
+                    </div>
+                  </th>
+                  <th
+                    className="px-4 py-2 text-center relative"
+                    style={{ width: columnWidths.songs }}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="w-full text-center">Songs</span>
+                      <div
+                        className="h-4 w-[6px] cursor-col-resize bg-zinc-300 hover:bg-zinc-500 dark:bg-zinc-600 dark:hover:bg-zinc-300"
+                        onMouseDown={(event) =>
+                          handleColumnResizeStart("songs", event)
+                        }
+                      />
+                    </div>
+                  </th>
+                  <th
+                    className="px-4 py-2 text-right relative"
+                    style={{ width: columnWidths.actions }}
+                  >
+                    <span>Actions</span>
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -330,7 +430,10 @@ export default function Home() {
                           : undefined
                       }
                     >
-                      <td className="max-w-xs px-4 py-3 align-top">
+                      <td
+                        className="px-4 py-3 align-top"
+                        style={{ width: columnWidths.playlist }}
+                      >
                         <div className="flex flex-col gap-0.5">
                           <div className="font-medium text-zinc-900 dark:text-zinc-50">
                             <Link
@@ -347,16 +450,28 @@ export default function Home() {
                           ) : null}
                         </div>
                       </td>
-                      <td className="whitespace-nowrap px-4 py-3 align-top text-xs text-zinc-600 dark:text-zinc-400">
+                      <td
+                        className="whitespace-nowrap px-4 py-3 align-top text-xs text-zinc-600 dark:text-zinc-400"
+                        style={{ width: columnWidths.imported }}
+                      >
                         {imported}
                       </td>
-                      <td className="whitespace-nowrap px-4 py-3 align-top text-xs text-zinc-600 dark:text-zinc-400">
+                      <td
+                        className="whitespace-nowrap px-4 py-3 align-top text-xs text-zinc-600 dark:text-zinc-400"
+                        style={{ width: columnWidths.lastSynced }}
+                      >
                         {lastSynced}
                       </td>
-                      <td className="px-4 py-3 text-right align-top text-sm tabular-nums text-zinc-900 dark:text-zinc-50">
+                      <td
+                        className="px-4 py-3 text-center align-top text-sm tabular-nums text-zinc-900 dark:text-zinc-50"
+                        style={{ width: columnWidths.songs }}
+                      >
                         {playlist.totalSongs}
                       </td>
-                      <td className="px-4 py-3 text-right align-top">
+                      <td
+                        className="px-4 py-3 text-right align-top"
+                        style={{ width: columnWidths.actions }}
+                      >
                         <button
                           type="button"
                           onClick={() => handleRemove(playlist.id)}
