@@ -29,12 +29,23 @@ export default function SongDetailPage() {
     "ultimate-gig:ui:tab-header-collapsed",
     false,
   );
+  const [notesBySongId, setNotesBySongId] = useLocalStorage<Record<string, string>>(
+    "ultimate-gig:tab-notes",
+    {},
+  );
+  const [notesOpen, setNotesOpen] = useLocalStorage<boolean>(
+    "ultimate-gig:ui:tab-notes-open",
+    false,
+  );
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
 
   const song = useMemo(
     () => songs.find((s) => s.id === songId),
     [songs, songId],
   );
+
+  const currentNotes = notesBySongId[songId] ?? "";
+  const hasNotes = currentNotes.trim().length > 0;
 
   const ugTabUrl = song?.ugTabUrl ?? "";
 
@@ -184,6 +195,32 @@ export default function SongDetailPage() {
         >
           {playlistId ? "Back to playlist" : "Back to playlists"}
         </Link>
+        <section className="space-y-1 rounded-md border border-dashed border-zinc-300 bg-white/70 p-2 text-[11px] text-zinc-700 shadow-sm dark:border-zinc-700 dark:bg-zinc-900/70 dark:text-zinc-200">
+          <div className="flex items-center justify-between gap-2">
+            <span className="font-medium">Song notes</span>
+            <button
+              type="button"
+              onClick={() => setNotesOpen((prev) => !prev)}
+              className="rounded border border-zinc-300 bg-white px-2 py-0.5 text-[11px] font-medium text-zinc-700 shadow-sm hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
+            >
+              {notesOpen ? "Hide notes" : hasNotes ? "Show notes" : "Add notes"}
+            </button>
+          </div>
+          {notesOpen && (
+            <textarea
+              value={currentNotes}
+              onChange={(event) =>
+                setNotesBySongId((current) => ({
+                  ...current,
+                  [songId]: event.target.value,
+                }))
+              }
+              rows={3}
+              placeholder="Add reminders, cues, capo info, etc. for this tab…"
+              className="mt-1 w-full resize-y rounded-md border border-zinc-300 bg-white px-2 py-1 text-[11px] text-zinc-800 shadow-inner outline-none focus:border-zinc-500 focus:ring-0 dark:border-zinc-700 dark:bg-black dark:text-zinc-50 dark:focus:border-zinc-400"
+            />
+          )}
+        </section>
         {!controlsCollapsed && (
           <div className="space-y-1">
             <h1 className="text-2xl font-semibold tracking-tight">{song.title}</h1>
