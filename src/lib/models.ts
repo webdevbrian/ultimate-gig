@@ -64,3 +64,29 @@ export interface UgImportResponse {
     songId: string;
   }[];
 }
+
+export interface UgChordBarre {
+  fret: number;
+  startString: number;
+  lastString: number;
+  finger: number;
+}
+
+export interface UgChordShape {
+  name: string;
+  baseFret: number;
+  frets: number[];
+  fingers: number[];
+  barres: UgChordBarre[];
+}
+
+export interface UgTabResponse {
+  title: string;
+  artist: string;
+  ugTabUrl: string;
+  ugTabType: "chords" | "tab" | "pro" | "other";
+  content: string;
+  tuningName?: string;
+  tuningValue?: string;
+  chordShapes?: Record<string, UgChordShape>;
+}
