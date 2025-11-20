@@ -21,8 +21,14 @@ export default function SongDetailPage() {
   const [autoScroll, setAutoScroll] = useState(false);
   // Scroll speed multiplier, 0.1x – 3.0x in 0.1 increments.
   // 1.0x is calibrated to feel like the old 0.3 speed.
-  const [scrollSpeed, setScrollSpeed] = useState(1); // default 1.0x
-  const [controlsCollapsed, setControlsCollapsed] = useState(false);
+  const [scrollSpeed, setScrollSpeed] = useLocalStorage<number>(
+    "ultimate-gig:ui:tab-scroll-speed",
+    1,
+  );
+  const [controlsCollapsed, setControlsCollapsed] = useLocalStorage<boolean>(
+    "ultimate-gig:ui:tab-header-collapsed",
+    false,
+  );
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
 
   const song = useMemo(
@@ -134,6 +140,25 @@ export default function SongDetailPage() {
     };
   }, [autoScroll, scrollSpeed, rawTabText]);
 
+  // When the header is collapsed on the song page, also hide the global
+  // app header that contains "Ultimate Gig" and "Local & offline-friendly".
+  useEffect(() => {
+    const headerEl = document.querySelector("header");
+    if (!headerEl) return undefined;
+
+    const element = headerEl as HTMLElement;
+    if (controlsCollapsed) {
+      element.style.display = "none";
+    } else {
+      element.style.display = "";
+    }
+
+    return () => {
+      // Ensure the header is restored when leaving the song page.
+      element.style.display = "";
+    };
+  }, [controlsCollapsed]);
+
   if (!song) {
     return (
       <div className="space-y-4">
@@ -204,8 +229,7 @@ export default function SongDetailPage() {
                 onChange={(event) =>
                   setScrollSpeed(Number.parseFloat(event.target.value) || 0.1)
                 }
-                disabled={!autoScroll}
-                className="h-6 rounded border border-zinc-300 bg-white px-1 text-[11px] text-zinc-700 shadow-sm focus:outline-none focus:ring-1 focus:ring-zinc-400 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:focus:ring-zinc-500"
+                className="h-6 rounded border border-zinc-300 bg-white px-1 text-[11px] text-zinc-700 shadow-sm focus:outline-none focus:ring-1 focus:ring-zinc-400 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:focus:ring-zinc-500"
               >
                 {Array.from({ length: 30 }, (_, index) =>
                   Number(((index + 1) * 0.1).toFixed(1)),
@@ -273,10 +297,26 @@ function formatWikiTabAsPlainText(content: string): string {
 }
 
 function decodeHtmlEntities(value: string): string {
-  return value
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;|&apos;/g, "'")
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">");
+  if (!value) return value;
+
+  return (
+    value
+      // Numeric decimal entities, e.g. &#039; or &#8217;
+      .replace(/&#(\d+);/g, (_match, code) => {
+        const n = Number.parseInt(code, 10);
+        return Number.isNaN(n) ? _match : String.fromCharCode(n);
+      })
+      // Numeric hex entities, e.g. &#x2019;
+      .replace(/&#x([0-9a-fA-F]+);/g, (_match, hex) => {
+        const n = Number.parseInt(hex, 16);
+        return Number.isNaN(n) ? _match : String.fromCharCode(n);
+      })
+      // Common named entities we expect from UG content
+      .replace(/&quot;/g, '"')
+      .replace(/&apos;/g, "'")
+      .replace(/&nbsp;/g, " ")
+      .replace(/&amp;/g, "&")
+      .replace(/&lt;/g, "<")
+      .replace(/&gt;/g, ">")
+  );
 }

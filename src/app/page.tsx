@@ -25,9 +25,18 @@ export default function Home() {
   const [importUrl, setImportUrl] = useState("");
   const [isImporting, setIsImporting] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
-  const [search, setSearch] = useState("");
-  const [sortKey, setSortKey] = useState<SortKey>("importedAt");
-  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  const [search, setSearch] = useLocalStorage<string>(
+    "ultimate-gig:playlists:search",
+    "",
+  );
+  const [sortKey, setSortKey] = useLocalStorage<SortKey>(
+    "ultimate-gig:playlists:sort-key",
+    "importedAt",
+  );
+  const [sortDir, setSortDir] = useLocalStorage<"asc" | "desc">(
+    "ultimate-gig:playlists:sort-dir",
+    "desc",
+  );
 
   const visiblePlaylists = useMemo(() => {
     let items = [...playlists];
