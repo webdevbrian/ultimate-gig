@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { Table } from "ka-table";
+import { Table, useTable } from "ka-table";
 import { DataType, SortingMode, EditingMode } from "ka-table/enums";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import type {
@@ -32,6 +32,17 @@ export default function Home() {
     "ultimate-gig:playlists:search",
     "",
   );
+  const [playlistsTableState, setPlaylistsTableState] = useLocalStorage<any>(
+    "ultimate-gig:ui:playlists-table",
+    {} as any,
+  );
+
+  const playlistsTable = useTable({
+    onDispatch: (_action, tableState) => {
+      const { data: _data, ...rest } = tableState as any;
+      setPlaylistsTableState(rest);
+    },
+  });
 
   const data = useMemo(() => {
     let items = [...playlists];
@@ -314,12 +325,15 @@ export default function Home() {
             </div>
           ) : (
             <Table
+              table={playlistsTable}
+              columnReordering
               columns={[
                 {
                   key: "name",
                   title: "Playlist",
                   dataType: DataType.String,
                   width: 260,
+                  isResizable: true,
                   style: { whiteSpace: "normal" },
                 },
                 {
@@ -327,30 +341,35 @@ export default function Home() {
                   title: "Imported",
                   dataType: DataType.String,
                   width: 160,
+                  isResizable: true,
                 },
                 {
                   key: "lastSynced",
                   title: "Last Synced",
                   dataType: DataType.String,
                   width: 180,
+                  isResizable: true,
                 },
                 {
                   key: "totalSongs",
                   title: "Songs",
                   dataType: DataType.Number,
                   width: 90,
+                  isResizable: true,
                   style: { textAlign: "center" },
                 },
                 {
                   key: "actions",
                   title: "Actions",
                   width: 110,
+                  isResizable: true,
                   style: { textAlign: "right" },
                 },
               ]}
               data={data}
               rowKeyField="id"
               sortingMode={SortingMode.Single}
+              {...playlistsTableState}
               childComponents={{
                 headCell: {
                   elementAttributes: () => ({

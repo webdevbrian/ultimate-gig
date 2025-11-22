@@ -28,3 +28,46 @@ body {
 .ka-table-wrapper table {
   width: 100%;
 }
+
+/* ka-table header layout + resize handles */
+.ka-thead-cell-wrapper {
+  display: flex;
+  align-items: center;
+}
+
+.ka-thead-cell-content-wrapper {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.ka-thead-cell-content {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.ka-icon-sort {
+  margin-left: 0.25rem;
+}
+
+.ka-icon-sort-arrow-down,
+.ka-icon-sort-arrow-up {
+  position: relative;
+  top: 1px;
+}
+
+.ka-thead-cell-resize {
+  flex: 0 0 auto;
+  align-self: stretch;
+  width: 2px;
+  cursor: col-resize;
+  background-color: #e5e5e5;
+  user-select: none;
+}
+
+@media (prefers-color-scheme: dark) {
+  .ka-thead-cell-resize {
+    background-color: #27272a;
+  }
+}
+

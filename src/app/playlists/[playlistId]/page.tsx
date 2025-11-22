@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useMemo, useState } from "react";
-import { Table } from "ka-table";
+import { Table, useTable } from "ka-table";
 import { DataType, SortingMode } from "ka-table/enums";
 
 import { useLocalStorage } from "@/hooks/useLocalStorage";
@@ -26,6 +26,17 @@ export default function PlaylistDetailPage() {
   const playlist = playlists.find((p) => p.id === playlistId);
 
   const [search, setSearch] = useState("");
+  const [songsTableState, setSongsTableState] = useLocalStorage<any>(
+    "ultimate-gig:ui:playlist-songs-table",
+    {} as any,
+  );
+
+  const songsTable = useTable({
+    onDispatch: (_action, tableState) => {
+      const { data: _data, ...rest } = tableState as any;
+      setSongsTableState(rest);
+    },
+  });
 
   const data = useMemo(() => {
     const bySongId = new Map(songs.map((song) => [song.id, song] as const));
@@ -126,12 +137,15 @@ export default function PlaylistDetailPage() {
             </div>
           ) : (
             <Table
+              table={songsTable}
+              columnReordering
               columns={[
                 {
                   key: "position",
                   title: "#",
                   dataType: DataType.Number,
                   width: 60,
+                  isResizable: true,
                   style: { textAlign: "center" },
                 },
                 {
@@ -139,17 +153,20 @@ export default function PlaylistDetailPage() {
                   title: "Artist",
                   dataType: DataType.String,
                   width: 220,
+                  isResizable: true,
                 },
                 {
                   key: "title",
                   title: "Title",
                   dataType: DataType.String,
                   width: 260,
+                  isResizable: true,
                 },
               ]}
               data={data}
               rowKeyField="id"
               sortingMode={SortingMode.Single}
+              {...songsTableState}
               childComponents={{
                 headCell: {
                   elementAttributes: () => ({
