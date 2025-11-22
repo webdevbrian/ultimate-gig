@@ -2,15 +2,12 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useMemo, useState, type MouseEvent as ReactMouseEvent } from "react";
+import { useMemo, useState } from "react";
+import { Table } from "ka-table";
+import { DataType, SortingMode } from "ka-table/enums";
 
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import type { Playlist, PlaylistItem, Song } from "@/lib/models";
-
-type SortKey = "position" | "title" | "artist";
-
-type SongColumnKey = "position" | "artist" | "title";
-type SongColumnWidths = Record<SongColumnKey, number>;
 
 export default function PlaylistDetailPage() {
   const params = useParams<{ playlistId: string }>();
@@ -29,22 +26,11 @@ export default function PlaylistDetailPage() {
   const playlist = playlists.find((p) => p.id === playlistId);
 
   const [search, setSearch] = useState("");
-  const [sortKey, setSortKey] = useState<SortKey>("position");
-  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
 
-  const [columnWidths, setColumnWidths] = useLocalStorage<SongColumnWidths>(
-    "ultimate-gig:playlist-songs:column-widths",
-    {
-      position: 60,
-      artist: 220,
-      title: 260,
-    },
-  );
-
-  const rows = useMemo(() => {
+  const data = useMemo(() => {
     const bySongId = new Map(songs.map((song) => [song.id, song] as const));
 
-    return playlistItems
+    let rows = playlistItems
       .filter((item) => item.playlistId === playlistId)
       .map((item) => {
         const song = bySongId.get(item.songId);
@@ -52,86 +38,26 @@ export default function PlaylistDetailPage() {
           ? {
               position: item.position,
               song,
+              title: song.title,
+              artist: song.artist,
+              id: `${song.id}-${item.position}`, // Unique row key
+              songId: song.id,
             }
           : null;
       })
-      .filter((row): row is { position: number; song: Song } => row != null);
-  }, [playlistItems, playlistId, songs]);
-
-  const filteredRows = useMemo(() => {
-    let result = [...rows];
+      .filter((row): row is NonNullable<typeof row> => row != null);
 
     const query = search.trim().toLowerCase();
     if (query) {
-      result = result.filter((row) => {
+      rows = rows.filter((row) => {
         const title = row.song.title.toLowerCase();
         const artist = row.song.artist.toLowerCase();
         return title.includes(query) || artist.includes(query);
       });
     }
 
-    result.sort((a, b) => {
-      let aVal: string | number = 0;
-      let bVal: string | number = 0;
-
-      if (sortKey === "position") {
-        aVal = a.position;
-        bVal = b.position;
-      } else if (sortKey === "title") {
-        aVal = a.song.title.toLowerCase();
-        bVal = b.song.title.toLowerCase();
-      } else {
-        aVal = a.song.artist.toLowerCase();
-        bVal = b.song.artist.toLowerCase();
-      }
-
-      if (aVal < bVal) return sortDir === "asc" ? -1 : 1;
-      if (aVal > bVal) return sortDir === "asc" ? 1 : -1;
-      return 0;
-    });
-
-    return result;
-  }, [rows, search, sortKey, sortDir]);
-
-  function toggleSort(nextKey: SortKey) {
-    setSortKey((prevKey) => {
-      if (prevKey === nextKey) {
-        setSortDir((prevDir) => (prevDir === "asc" ? "desc" : "asc"));
-        return prevKey;
-      }
-      setSortDir("asc");
-      return nextKey;
-    });
-  }
-
-  function handleColumnResizeStart(
-    key: SongColumnKey,
-    event: ReactMouseEvent<HTMLDivElement>,
-  ) {
-    event.preventDefault();
-    event.stopPropagation();
-
-    const startX = event.clientX;
-    const startWidth = columnWidths[key] ?? 120;
-    const minWidth = 40;
-
-    const handleMove = (moveEvent: MouseEvent) => {
-      const deltaX = moveEvent.clientX - startX;
-      const nextWidth = Math.max(minWidth, Math.round(startWidth + deltaX));
-      setColumnWidths((current) => ({
-        ...current,
-        [key]: nextWidth,
-      }));
-    };
-
-    const handleUp = () => {
-      window.removeEventListener("mousemove", handleMove);
-      window.removeEventListener("mouseup", handleUp);
-    };
-
-    window.addEventListener("mousemove", handleMove);
-    window.addEventListener("mouseup", handleUp);
-  }
+    return rows;
+  }, [playlistItems, playlistId, songs, search]);
 
   if (!playlist) {
     return (
@@ -149,7 +75,7 @@ export default function PlaylistDetailPage() {
     );
   }
 
-  const songCount = rows.length;
+  const songCount = data.length;
 
   return (
     <div className="space-y-6">
@@ -187,132 +113,84 @@ export default function PlaylistDetailPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search by title or artist"
-              className="w-full rounded-md border border-black/10 bg-white px-3 py-2 text-sm outline-none ring-0 transition focus:border-black/40 dark:border-white/15 dark:bg-black dark:text-white dark:focus:border-white/60 sm:w-72"
+              className="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm outline-none ring-0 transition focus:border-zinc-400 dark:border-white/15 dark:bg-black dark:text-white dark:focus:border-white/60 sm:w-72"
             />
-            <div className="flex items-center gap-1 text-xs text-zinc-600 dark:text-zinc-400">
-              <span>Sort by</span>
-              <button
-                type="button"
-                onClick={() => toggleSort("position")}
-                className={`rounded px-2 py-1 ${
-                  sortKey === "position"
-                    ? "bg-black text-white dark:bg-white dark:text-black"
-                    : "hover:bg-black/5 dark:hover:bg-white/10"
-                }`}
-              >
-                Original order
-              </button>
-              <button
-                type="button"
-                onClick={() => toggleSort("title")}
-                className={`rounded px-2 py-1 ${
-                  sortKey === "title"
-                    ? "bg-black text-white dark:bg-white dark:text-black"
-                    : "hover:bg-black/5 dark:hover:bg-white/10"
-                }`}
-              >
-                Title
-              </button>
-              <button
-                type="button"
-                onClick={() => toggleSort("artist")}
-                className={`rounded px-2 py-1 ${
-                  sortKey === "artist"
-                    ? "bg-black text-white dark:bg-white dark:text-black"
-                    : "hover:bg-black/5 dark:hover:bg-white/10"
-                }`}
-              >
-                Artist
-              </button>
-            </div>
           </div>
         </div>
 
-        <div className="overflow-hidden rounded-lg border border-black/5 bg-white/80 text-sm shadow-sm dark:border-white/10 dark:bg-black/60">
-          {filteredRows.length === 0 ? (
+        <div className="ka-table-wrapper overflow-hidden rounded-lg border border-zinc-200 bg-white text-sm shadow-sm dark:border-white/10 dark:bg-black/60">
+          {data.length === 0 ? (
             <div className="px-4 py-6 text-center text-sm text-zinc-500 dark:text-zinc-400">
               No songs in this playlist yet. Once synced from Ultimate Guitar,
               songs will appear here.
             </div>
           ) : (
-            <table className="min-w-full table-fixed border-separate border-spacing-0">
-              <thead className="bg-black/5 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:bg-white/5 dark:text-zinc-400">
-                <tr>
-                  <th
-                    className="px-4 py-2 relative"
-                    style={{ width: columnWidths.position }}
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <span>#</span>
-                      <div
-                        className="h-4 w-[6px] cursor-col-resize bg-zinc-300 hover:bg-zinc-500 dark:bg-zinc-600 dark:hover:bg-zinc-300"
-                        onMouseDown={(event) =>
-                          handleColumnResizeStart("position", event)
-                        }
-                      />
-                    </div>
-                  </th>
-                  <th
-                    className="px-4 py-2 relative"
-                    style={{ width: columnWidths.artist }}
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <span>Artist</span>
-                      <div
-                        className="h-4 w-[6px] cursor-col-resize bg-zinc-300 hover:bg-zinc-500 dark:bg-zinc-600 dark:hover:bg-zinc-300"
-                        onMouseDown={(event) =>
-                          handleColumnResizeStart("artist", event)
-                        }
-                      />
-                    </div>
-                  </th>
-                  <th
-                    className="px-4 py-2"
-                    style={{ width: columnWidths.title }}
-                  >
-                    Title
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredRows.map((row, index) => {
-                  const isLast = index === filteredRows.length - 1;
-                  return (
-                    <tr
-                      key={`${row.song.id}-${row.position}`}
-                      className={
-                        !isLast
-                          ? "border-b border-black/5 dark:border-white/10"
-                          : undefined
-                      }
-                    >
-                      <td
-                        className="px-4 py-3 align-top text-xs tabular-nums text-zinc-600 dark:text-zinc-400"
-                        style={{ width: columnWidths.position }}
-                      >
-                        {row.position}
-                      </td>
-                      <td
-                        className="px-4 py-3 align-top text-sm text-zinc-700 dark:text-zinc-300"
-                        style={{ width: columnWidths.artist }}
-                      >
-                        {row.song.artist}
-                      </td>
-                      <td
-                        className="px-4 py-3 align-top"
-                        style={{ width: columnWidths.title }}
-                      >
+            <Table
+              columns={[
+                {
+                  key: "position",
+                  title: "#",
+                  dataType: DataType.Number,
+                  width: 60,
+                  style: { textAlign: "center" },
+                },
+                {
+                  key: "artist",
+                  title: "Artist",
+                  dataType: DataType.String,
+                  width: 220,
+                },
+                {
+                  key: "title",
+                  title: "Title",
+                  dataType: DataType.String,
+                  width: 260,
+                },
+              ]}
+              data={data}
+              rowKeyField="id"
+              sortingMode={SortingMode.Single}
+              childComponents={{
+                headCell: {
+                  elementAttributes: () => ({
+                    className:
+                      "px-4 py-2 bg-zinc-50 text-[11px] font-semibold uppercase tracking-wide text-zinc-500 border-b border-zinc-200 dark:bg-zinc-900 dark:text-zinc-400 dark:border-white/10",
+                  }),
+                },
+                cell: {
+                  elementAttributes: () => ({
+                    className:
+                      "px-4 py-2 bg-white border-b border-zinc-100 text-sm text-zinc-900 dark:bg-zinc-900 dark:border-white/5 dark:text-zinc-100",
+                  }),
+                },
+                dataRow: {
+                  elementAttributes: () => ({
+                    className:
+                      "hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors",
+                  }),
+                },
+                cellText: {
+                  content: (props) => {
+                    if (props.column.key === "title") {
+                      const row = props.rowData;
+                      return (
                         <div className="flex flex-col gap-0.5">
                           <div className="font-medium text-zinc-900 dark:text-zinc-50">
-                            <Link href={`/songs/${row.song.id}?playlistId=${playlistId}`} className="hover:underline">{row.song.title}</Link>
+                            <Link
+                              href={`/songs/${row.songId}?playlistId=${playlistId}`}
+                              className="hover:underline"
+                            >
+                              {row.title}
+                            </Link>
                           </div>
                         </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                      );
+                    }
+                    return props.value;
+                  },
+                },
+              }}
+            />
           )}
         </div>
       </section>

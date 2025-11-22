@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState, type MouseEvent as ReactMouseEvent } from "react";
+import { useMemo, useState } from "react";
+import { Table } from "ka-table";
+import { DataType, SortingMode, EditingMode } from "ka-table/enums";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import type {
   Playlist,
@@ -11,9 +13,6 @@ import type {
 } from "@/lib/models";
 
 type SortKey = "importedAt" | "name";
-
-type PlaylistColumnKey = "playlist" | "imported" | "lastSynced" | "songs" | "actions";
-type PlaylistColumnWidths = Record<PlaylistColumnKey, number>;
 
 export default function Home() {
   const [playlists, setPlaylists] = useLocalStorage<Playlist[]>(
@@ -28,57 +27,24 @@ export default function Home() {
   const [importUrl, setImportUrl] = useState("");
   const [isImporting, setIsImporting] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
+  const [syncingIds, setSyncingIds] = useState<Set<string>>(new Set());
   const [search, setSearch] = useLocalStorage<string>(
     "ultimate-gig:playlists:search",
     "",
   );
-  const [sortKey, setSortKey] = useLocalStorage<SortKey>(
-    "ultimate-gig:playlists:sort-key",
-    "importedAt",
-  );
-  const [sortDir, setSortDir] = useLocalStorage<"asc" | "desc">(
-    "ultimate-gig:playlists:sort-dir",
-    "desc",
-  );
 
-  const [columnWidths, setColumnWidths] = useLocalStorage<PlaylistColumnWidths>(
-    "ultimate-gig:playlists:column-widths",
-    {
-      playlist: 260,
-      imported: 160,
-      lastSynced: 180,
-      songs: 90,
-      actions: 110,
-    },
-  );
-
-  const visiblePlaylists = useMemo(() => {
+  const data = useMemo(() => {
     let items = [...playlists];
-
     const query = search.trim().toLowerCase();
     if (query) {
       items = items.filter((p) => p.name.toLowerCase().includes(query));
     }
-
-    items.sort((a, b) => {
-      let aVal: string = "";
-      let bVal: string = "";
-
-      if (sortKey === "name") {
-        aVal = a.name.toLowerCase();
-        bVal = b.name.toLowerCase();
-      } else {
-        aVal = a.importedAt;
-        bVal = b.importedAt;
-      }
-
-      if (aVal < bVal) return sortDir === "asc" ? -1 : 1;
-      if (aVal > bVal) return sortDir === "asc" ? 1 : -1;
-      return 0;
-    });
-
-    return items;
-  }, [playlists, search, sortKey, sortDir]);
+    return items.map((p) => ({
+      ...p,
+      imported: new Date(p.importedAt).toLocaleString(),
+      lastSynced: p.lastSyncedAt ? new Date(p.lastSyncedAt).toLocaleString() : "—",
+    }));
+  }, [playlists, search]);
 
   async function handleImportSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -91,9 +57,7 @@ export default function Home() {
     try {
       const res = await fetch("/api/ug/import-playlist", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url, mode: "live" }),
       });
 
@@ -102,15 +66,12 @@ export default function Home() {
         try {
           const data = (await res.json()) as { error?: string };
           if (data?.error) message = data.error;
-        } catch {
-          // ignore
-        }
+        } catch {}
         setImportError(message);
         return;
       }
 
       const data = (await res.json()) as UgImportResponse;
-
       const now = new Date().toISOString();
       const sourcePlaylistId = data.playlist.sourcePlaylistId;
       const existing = playlists.find(
@@ -118,9 +79,7 @@ export default function Home() {
       );
       const playlistId =
         existing?.id ||
-        `pl_${Date.now().toString(36)}_${Math.random()
-          .toString(36)
-          .slice(2, 8)}`;
+        `pl_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
 
       setPlaylists((current) => {
         const already = current.find(
@@ -151,22 +110,19 @@ export default function Home() {
           sourcePlaylistId,
           name: data.playlist.name || "Ultimate Guitar playlist",
           description:
-            data.playlist.description ||
-            "Imported by URL (details to be synced)",
+            data.playlist.description || "Imported by URL (details to be synced)",
           importedAt: now,
           lastSyncedAt: now,
           totalSongs,
           spotifyPlaylistId: undefined,
           youtubePlaylistId: undefined,
         };
-
         return [newPlaylist, ...current];
       });
 
       setSongs((current) => {
         const existingById = new Map(current.map((s) => [s.id, s] as const));
         const next = [...current];
-
         for (const apiSong of data.songs) {
           if (existingById.has(apiSong.id)) continue;
           next.push({
@@ -177,7 +133,6 @@ export default function Home() {
             ugTabType: apiSong.ugTabType,
           });
         }
-
         return next;
       });
 
@@ -186,7 +141,6 @@ export default function Home() {
           (item) => item.playlistId !== playlistId,
         );
         const next = [...filtered];
-
         for (const item of data.playlistItems) {
           next.push({
             id: `pi_${playlistId}_${item.position}_${item.songId}`,
@@ -195,7 +149,6 @@ export default function Home() {
             songId: item.songId,
           });
         }
-
         return next;
       });
 
@@ -207,48 +160,87 @@ export default function Home() {
     }
   }
 
+  async function handleSync(playlist: Playlist) {
+    if (!playlist.sourcePlaylistId) return;
+    if (syncingIds.has(playlist.id)) return;
+
+    setSyncingIds((prev) => new Set(prev).add(playlist.id));
+    const url = `https://www.ultimate-guitar.com/user/playlist/shared?h=${playlist.sourcePlaylistId}`;
+
+    try {
+      const res = await fetch("/api/ug/import-playlist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url, mode: "live" }),
+      });
+
+      if (!res.ok) {
+        console.error("Sync failed");
+        return;
+      }
+
+      const data = (await res.json()) as UgImportResponse;
+      const now = new Date().toISOString();
+
+      setPlaylists((current) => {
+        return current.map((p) =>
+          p.id === playlist.id
+            ? {
+                ...p,
+                name: data.playlist.name || p.name,
+                description:
+                  data.playlist.description !== undefined
+                    ? data.playlist.description
+                    : p.description,
+                lastSyncedAt: now,
+                totalSongs: data.songs.length,
+              }
+            : p,
+        );
+      });
+
+      setSongs((current) => {
+        const existingById = new Map(current.map((s) => [s.id, s] as const));
+        const next = [...current];
+        for (const apiSong of data.songs) {
+          if (existingById.has(apiSong.id)) continue;
+          next.push({
+            id: apiSong.id,
+            title: apiSong.title,
+            artist: apiSong.artist,
+            ugTabUrl: apiSong.ugTabUrl,
+            ugTabType: apiSong.ugTabType,
+          });
+        }
+        return next;
+      });
+
+      setPlaylistItems((current) => {
+        const filtered = current.filter((item) => item.playlistId !== playlist.id);
+        const next = [...filtered];
+        for (const item of data.playlistItems) {
+          next.push({
+            id: `pi_${playlist.id}_${item.position}_${item.songId}`,
+            playlistId: playlist.id,
+            position: item.position,
+            songId: item.songId,
+          });
+        }
+        return next;
+      });
+    } catch (error) {
+      console.error("Sync error", error);
+    } finally {
+      setSyncingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(playlist.id);
+        return next;
+      });
+    }
+  }
+
   function handleRemove(id: string) {
     setPlaylists((current) => current.filter((p) => p.id !== id));
-  }
-
-  function toggleSort(nextKey: SortKey) {
-    setSortKey((prevKey) => {
-      if (prevKey === nextKey) {
-        setSortDir((prevDir) => (prevDir === "asc" ? "desc" : "asc"));
-        return prevKey;
-      }
-      setSortDir("asc");
-      return nextKey;
-    });
-  }
-
-  function handleColumnResizeStart(
-    key: PlaylistColumnKey,
-    event: ReactMouseEvent<HTMLDivElement>,
-  ) {
-    event.preventDefault();
-    event.stopPropagation();
-
-    const startX = event.clientX;
-    const startWidth = columnWidths[key] ?? 120;
-    const minWidth = 40;
-
-    const handleMove = (moveEvent: MouseEvent) => {
-      const deltaX = moveEvent.clientX - startX;
-      const nextWidth = Math.max(minWidth, Math.round(startWidth + deltaX));
-      setColumnWidths((current) => ({
-        ...current,
-        [key]: nextWidth,
-      }));
-    };
-
-    const handleUp = () => {
-      window.removeEventListener("mousemove", handleMove);
-      window.removeEventListener("mouseup", handleUp);
-    };
-
-    window.addEventListener("mousemove", handleMove);
-    window.addEventListener("mouseup", handleUp);
   }
 
   return (
@@ -261,7 +253,7 @@ export default function Home() {
         </p>
       </section>
 
-      <section className="flex flex-col gap-3 rounded-lg border border-black/5 bg-white/80 p-4 shadow-sm dark:border-white/10 dark:bg-black/60">
+      <section className="flex flex-col gap-3 rounded-lg border border-zinc-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-black/60">
         <form
           className="flex flex-col gap-3 sm:flex-row"
           onSubmit={handleImportSubmit}
@@ -275,14 +267,14 @@ export default function Home() {
               value={importUrl}
               onChange={(e) => setImportUrl(e.target.value)}
               placeholder="https://www.ultimate-guitar.com/user/playlist/shared?h=..."
-              className="mt-1 w-full rounded-md border border-black/10 bg-white px-3 py-2 text-sm outline-none ring-0 transition focus:border-black/40 dark:border-white/15 dark:bg-black dark:text-white dark:focus:border-white/60"
+              className="mt-1 w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm outline-none ring-0 transition focus:border-zinc-400 dark:border-white/15 dark:bg-black dark:text-white dark:focus:border-white/60"
             />
           </div>
           <div className="flex items-end">
             <button
               type="submit"
               disabled={isImporting}
-              className="inline-flex items-center justify-center rounded-md bg-black px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-black/80 dark:bg-white dark:text-black dark:hover:bg-white/90"
+              className="inline-flex items-center justify-center rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-zinc-800 dark:bg-white dark:text-black dark:hover:bg-white/90"
             >
               {isImporting ? "Importing…" : "Import playlist"}
             </button>
@@ -310,130 +302,79 @@ export default function Home() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search by playlist name"
-              className="w-full rounded-md border border-black/10 bg-white px-3 py-2 text-sm outline-none ring-0 transition focus:border-black/40 dark:border-white/15 dark:bg-black dark:text-white dark:focus:border-white/60 sm:w-64"
+              className="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm outline-none ring-0 transition focus:border-zinc-400 dark:border-white/15 dark:bg-black dark:text-white dark:focus:border-white/60 sm:w-64"
             />
-            <div className="flex items-center gap-1 text-xs text-zinc-600 dark:text-zinc-400">
-              <span>Sort by</span>
-              <button
-                type="button"
-                onClick={() => toggleSort("importedAt")}
-                className={`rounded px-2 py-1 ${
-                  sortKey === "importedAt"
-                    ? "bg-black text-white dark:bg-white dark:text-black"
-                    : "hover:bg-black/5 dark:hover:bg-white/10"
-                }`}
-              >
-                Imported
-              </button>
-              <button
-                type="button"
-                onClick={() => toggleSort("name")}
-                className={`rounded px-2 py-1 ${
-                  sortKey === "name"
-                    ? "bg-black text-white dark:bg-white dark:text-black"
-                    : "hover:bg-black/5 dark:hover:bg-white/10"
-                }`}
-              >
-                Name
-              </button>
-            </div>
           </div>
         </div>
 
-        <div className="overflow-hidden rounded-lg border border-black/5 bg-white/80 text-sm shadow-sm dark:border-white/10 dark:bg-black/60">
-          {visiblePlaylists.length === 0 ? (
+        <div className="ka-table-wrapper overflow-hidden rounded-lg border border-zinc-200 bg-white text-sm shadow-sm dark:border-white/10 dark:bg-black/60">
+          {data.length === 0 ? (
             <div className="px-4 py-6 text-center text-sm text-zinc-500 dark:text-zinc-400">
               No playlists yet. Import a playlist URL above to get started.
             </div>
           ) : (
-            <table className="min-w-full table-fixed border-separate border-spacing-0">
-              <thead className="bg-black/5 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:bg-white/5 dark:text-zinc-400">
-                <tr>
-                  <th
-                    className="px-4 py-2 relative"
-                    style={{ width: columnWidths.playlist }}
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <span>Playlist</span>
-                      <div
-                        className="h-4 w-[6px] cursor-col-resize bg-zinc-300 hover:bg-zinc-500 dark:bg-zinc-600 dark:hover:bg-zinc-300"
-                        onMouseDown={(event) =>
-                          handleColumnResizeStart("playlist", event)
-                        }
-                      />
-                    </div>
-                  </th>
-                  <th
-                    className="px-4 py-2 relative"
-                    style={{ width: columnWidths.imported }}
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <span>Imported</span>
-                      <div
-                        className="h-4 w-[6px] cursor-col-resize bg-zinc-300 hover:bg-zinc-500 dark:bg-zinc-600 dark:hover:bg-zinc-300"
-                        onMouseDown={(event) =>
-                          handleColumnResizeStart("imported", event)
-                        }
-                      />
-                    </div>
-                  </th>
-                  <th
-                    className="px-4 py-2 relative"
-                    style={{ width: columnWidths.lastSynced }}
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <span>Last synced</span>
-                      <div
-                        className="h-4 w-[6px] cursor-col-resize bg-zinc-300 hover:bg-zinc-500 dark:bg-zinc-600 dark:hover:bg-zinc-300"
-                        onMouseDown={(event) =>
-                          handleColumnResizeStart("lastSynced", event)
-                        }
-                      />
-                    </div>
-                  </th>
-                  <th
-                    className="px-4 py-2 text-center relative"
-                    style={{ width: columnWidths.songs }}
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="w-full text-center">Songs</span>
-                      <div
-                        className="h-4 w-[6px] cursor-col-resize bg-zinc-300 hover:bg-zinc-500 dark:bg-zinc-600 dark:hover:bg-zinc-300"
-                        onMouseDown={(event) =>
-                          handleColumnResizeStart("songs", event)
-                        }
-                      />
-                    </div>
-                  </th>
-                  <th
-                    className="px-4 py-2 text-right relative"
-                    style={{ width: columnWidths.actions }}
-                  >
-                    <span>Actions</span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {visiblePlaylists.map((playlist, index) => {
-                  const imported = new Date(playlist.importedAt).toLocaleString();
-                  const lastSynced = playlist.lastSyncedAt
-                    ? new Date(playlist.lastSyncedAt).toLocaleString()
-                    : "—";
-                  const isLast = index === visiblePlaylists.length - 1;
-
-                  return (
-                    <tr
-                      key={playlist.id}
-                      className={
-                        !isLast
-                          ? "border-b border-black/5 dark:border-white/10"
-                          : undefined
-                      }
-                    >
-                      <td
-                        className="px-4 py-3 align-top"
-                        style={{ width: columnWidths.playlist }}
-                      >
+            <Table
+              columns={[
+                {
+                  key: "name",
+                  title: "Playlist",
+                  dataType: DataType.String,
+                  width: 260,
+                  style: { whiteSpace: "normal" },
+                },
+                {
+                  key: "imported",
+                  title: "Imported",
+                  dataType: DataType.String,
+                  width: 160,
+                },
+                {
+                  key: "lastSynced",
+                  title: "Last Synced",
+                  dataType: DataType.String,
+                  width: 180,
+                },
+                {
+                  key: "totalSongs",
+                  title: "Songs",
+                  dataType: DataType.Number,
+                  width: 90,
+                  style: { textAlign: "center" },
+                },
+                {
+                  key: "actions",
+                  title: "Actions",
+                  width: 110,
+                  style: { textAlign: "right" },
+                },
+              ]}
+              data={data}
+              rowKeyField="id"
+              sortingMode={SortingMode.Single}
+              childComponents={{
+                headCell: {
+                  elementAttributes: () => ({
+                    className:
+                      "px-4 py-2 bg-zinc-50 text-[11px] font-semibold uppercase tracking-wide text-zinc-500 border-b border-zinc-200 dark:bg-zinc-900 dark:text-zinc-400 dark:border-white/10",
+                  }),
+                },
+                cell: {
+                  elementAttributes: () => ({
+                    className:
+                      "px-4 py-2 bg-white border-b border-zinc-100 text-sm text-zinc-900 dark:bg-zinc-900 dark:border-white/5 dark:text-zinc-100",
+                  }),
+                },
+                dataRow: {
+                  elementAttributes: () => ({
+                    className:
+                      "hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors",
+                  }),
+                },
+                cellText: {
+                  content: (props) => {
+                    if (props.column.key === "name") {
+                      const playlist = props.rowData;
+                      return (
                         <div className="flex flex-col gap-0.5">
                           <div className="font-medium text-zinc-900 dark:text-zinc-50">
                             <Link
@@ -449,42 +390,35 @@ export default function Home() {
                             </div>
                           ) : null}
                         </div>
-                      </td>
-                      <td
-                        className="whitespace-nowrap px-4 py-3 align-top text-xs text-zinc-600 dark:text-zinc-400"
-                        style={{ width: columnWidths.imported }}
-                      >
-                        {imported}
-                      </td>
-                      <td
-                        className="whitespace-nowrap px-4 py-3 align-top text-xs text-zinc-600 dark:text-zinc-400"
-                        style={{ width: columnWidths.lastSynced }}
-                      >
-                        {lastSynced}
-                      </td>
-                      <td
-                        className="px-4 py-3 text-center align-top text-sm tabular-nums text-zinc-900 dark:text-zinc-50"
-                        style={{ width: columnWidths.songs }}
-                      >
-                        {playlist.totalSongs}
-                      </td>
-                      <td
-                        className="px-4 py-3 text-right align-top"
-                        style={{ width: columnWidths.actions }}
-                      >
-                        <button
-                          type="button"
-                          onClick={() => handleRemove(playlist.id)}
-                          className="text-xs font-medium text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
-                        >
-                          Remove
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                      );
+                    }
+                    if (props.column.key === "actions") {
+                      const playlist = props.rowData;
+                      return (
+                        <div className="flex flex-col gap-2 items-end">
+                          <button
+                            type="button"
+                            onClick={() => handleSync(playlist)}
+                            disabled={syncingIds.has(playlist.id)}
+                            className="text-xs font-medium text-zinc-600 hover:text-zinc-900 disabled:opacity-50 dark:text-zinc-400 dark:hover:text-zinc-200"
+                          >
+                            {syncingIds.has(playlist.id) ? "Syncing..." : "Resync"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleRemove(playlist.id)}
+                            className="text-xs font-medium text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      );
+                    }
+                    return props.value;
+                  },
+                },
+              }}
+            />
           )}
         </div>
       </section>
