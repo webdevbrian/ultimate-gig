@@ -173,6 +173,34 @@ export default function SongDetailPage() {
     };
   }, [controlsCollapsed]);
 
+  // Constrain the tab section to the viewport bottom so it has a natural
+  // scrollbar on the section itself.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const updateMaxHeight = () => {
+      const container = scrollContainerRef.current;
+      if (!container) return;
+
+      const rect = container.getBoundingClientRect();
+      const viewportHeight = window.innerHeight;
+      const available = viewportHeight - rect.top - 16; // 16px bottom offset
+
+      if (available > 0) {
+        container.style.maxHeight = `${available}px`;
+      } else {
+        container.style.removeProperty("max-height");
+      }
+    };
+
+    updateMaxHeight();
+    window.addEventListener("resize", updateMaxHeight);
+
+    return () => {
+      window.removeEventListener("resize", updateMaxHeight);
+    };
+  }, [controlsCollapsed, notesOpen]);
+
   if (!songsHydrated) {
     return (
       <div className="space-y-4">
@@ -206,7 +234,7 @@ export default function SongDetailPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-1 min-h-0 w-full flex-col space-y-6">
       <div className="space-y-2">
         <Link
           href={playlistId ? `/playlists/${playlistId}` : "/"}
@@ -258,7 +286,10 @@ export default function SongDetailPage() {
         )}
       </div>
 
-      <section className="space-y-3 rounded-lg border border-black/5 bg-white/80 p-4 text-sm shadow-sm dark:border-white/10 dark:bg-black/60">
+      <section
+        ref={scrollContainerRef}
+        className="flex min-h-0 flex-1 w-full flex-col space-y-3 rounded-lg border border-black/5 bg-white/80 p-4 text-sm shadow-sm overflow-y-auto dark:border-white/10 dark:bg-black/60"
+      >
         <div className="flex flex-wrap items-center justify-between gap-3 text-[11px] text-zinc-600 dark:text-zinc-400">
           <button
             type="button"
@@ -297,14 +328,7 @@ export default function SongDetailPage() {
           </div>
         </div>
 
-        <div
-          ref={scrollContainerRef}
-          className={`overflow-y-auto pt-2 ${
-            controlsCollapsed
-              ? "max-h-[calc(100vh-9rem)]"
-              : "max-h-[calc(100vh-13rem)]"
-          }`}
-        >
+        <div className="pt-2 pb-4">
           {isLoading ? (
             <p className="text-xs text-zinc-500 dark:text-zinc-500">
               Loading tab from Ultimate Guitar…
