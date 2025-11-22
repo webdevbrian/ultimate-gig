@@ -5,7 +5,7 @@ import { useParams, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useLocalStorage } from "@/hooks/useLocalStorage";
-import type { Song, UgTabResponse } from "@/lib/models";
+import type { PlaylistItem, Song, UgTabResponse } from "@/lib/models";
 
 export default function SongDetailPage() {
   const params = useParams<{ songId: string }>();
@@ -15,6 +15,10 @@ export default function SongDetailPage() {
   const songId = params.songId as string;
   const [songs, , songsHydrated] = useLocalStorage<Song[]>(
     "ultimate-gig:songs",
+    [],
+  );
+  const [playlistItems, , playlistItemsHydrated] = useLocalStorage<PlaylistItem[]>(
+    "ultimate-gig:playlist-items",
     [],
   );
   const [tab, setTab] = useState<UgTabResponse | null>(null);
@@ -79,6 +83,30 @@ export default function SongDetailPage() {
     () => (songsHydrated ? songs.find((s) => s.id === songId) : undefined),
     [songs, songId, songsHydrated],
   );
+
+  const playlistSongs = useMemo(() => {
+    if (!playlistId || !songsHydrated || !playlistItemsHydrated) return [];
+
+    const bySongId = new Map(songs.map((s) => [s.id, s] as const));
+
+    return playlistItems
+      .filter((item) => item.playlistId === playlistId)
+      .sort((a, b) => a.position - b.position || a.id.localeCompare(b.id))
+      .map((item) => {
+        const playlistSong = bySongId.get(item.songId);
+        return playlistSong ? { item, song: playlistSong } : null;
+      })
+      .filter((entry): entry is { item: PlaylistItem; song: Song } => entry != null);
+  }, [playlistId, playlistItems, playlistItemsHydrated, songs, songsHydrated]);
+
+  const currentPlaylistIndex = playlistSongs.findIndex((entry) => entry.song.id === songId);
+  const previousPlaylistSong =
+    currentPlaylistIndex > 0 ? playlistSongs[currentPlaylistIndex - 1] : undefined;
+  const nextPlaylistSong =
+    currentPlaylistIndex >= 0 && currentPlaylistIndex < playlistSongs.length - 1
+      ? playlistSongs[currentPlaylistIndex + 1]
+      : undefined;
+  const playlistQuery = playlistId ? `?playlistId=${encodeURIComponent(playlistId)}` : "";
 
   const currentNotes = notesBySongId[songId] ?? "";
   const hasNotes = currentNotes.trim().length > 0;
@@ -276,12 +304,35 @@ export default function SongDetailPage() {
   return (
     <div className="flex flex-1 min-h-0 w-full flex-col space-y-6">
       <div className="space-y-3">
-        <Link
-          href={playlistId ? `/playlists/${playlistId}` : "/"}
-          className={`${subtleActionButtonClass} mb-3`}
-        >
-          {playlistId ? "Back to playlist" : "Back to playlists"}
-        </Link>
+        {playlistId ? (
+          <div className="mb-3 flex flex-wrap items-center gap-2">
+            <Link href={`/playlists/${playlistId}`} className={subtleActionButtonClass}>
+              Back to playlist
+            </Link>
+            <div className="ml-auto flex flex-wrap items-center gap-2">
+              {previousPlaylistSong ? (
+                <Link
+                  href={`/songs/${previousPlaylistSong.song.id}${playlistQuery}`}
+                  className={subtleActionButtonClass}
+                >
+                  {`Previous: ${previousPlaylistSong.song.artist} | ${previousPlaylistSong.song.title}`}
+                </Link>
+              ) : null}
+              {nextPlaylistSong ? (
+                <Link
+                  href={`/songs/${nextPlaylistSong.song.id}${playlistQuery}`}
+                  className={subtleActionButtonClass}
+                >
+                  {`Next: ${nextPlaylistSong.song.artist} | ${nextPlaylistSong.song.title}`}
+                </Link>
+              ) : null}
+            </div>
+          </div>
+        ) : (
+          <Link href="/" className={`${subtleActionButtonClass} mb-3`}>
+            Back to playlists
+          </Link>
+        )}
         <section className="space-y-1 rounded-md border border-dashed border-zinc-300 bg-white/70 p-2 text-[11px] text-zinc-700 shadow-sm dark:border-zinc-700 dark:bg-zinc-900/70 dark:text-zinc-200">
           <div className="flex items-center justify-between gap-2">
             <span className="font-medium">Song notes</span>
