@@ -113,7 +113,7 @@ export default function PlaylistDetailPage() {
 
     const startX = event.clientX;
     const startWidth = columnWidths[key] ?? 120;
-    const minWidth = 80;
+    const minWidth = 40;
 
     const handleMove = (moveEvent: MouseEvent) => {
       const deltaX = moveEvent.clientX - startX;
@@ -235,7 +235,7 @@ export default function PlaylistDetailPage() {
               songs will appear here.
             </div>
           ) : (
-            <table className="min-w-full border-separate border-spacing-0">
+            <table className="min-w-full table-fixed border-separate border-spacing-0">
               <thead className="bg-black/5 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:bg-white/5 dark:text-zinc-400">
                 <tr>
                   <th
