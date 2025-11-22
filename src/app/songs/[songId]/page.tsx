@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { SpotifyIcon } from "@/components/icons/SpotifyIcon";
 
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import type { PlaylistItem, Song, UgTabResponse } from "@/lib/models";
@@ -13,7 +14,7 @@ export default function SongDetailPage() {
   const playlistId = searchParams.get("playlistId");
 
   const songId = params.songId as string;
-  const [songs, , songsHydrated] = useLocalStorage<Song[]>(
+  const [songs, setSongs, songsHydrated] = useLocalStorage<Song[]>(
     "ultimate-gig:songs",
     [],
   );
@@ -48,6 +49,12 @@ export default function SongDetailPage() {
     "ultimate-gig:ui:tab-notes-open",
     false,
   );
+  const [spotifyLinkInput, setSpotifyLinkInput] = useState("");
+  const [spotifyStatus, setSpotifyStatus] = useState<
+    | { type: "success"; message: string }
+    | { type: "error"; message: string }
+    | null
+  >(null);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const subtleActionButtonClass =
     "inline-flex items-center justify-center rounded border border-zinc-300 bg-white px-2 py-0.5 text-[11px] font-medium text-zinc-700 shadow-sm transition hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800";
@@ -163,6 +170,49 @@ export default function SongDetailPage() {
     () => (tab?.content ? formatWikiTabAsPlainText(tab.content) : ""),
     [tab?.content],
   );
+
+  useEffect(() => {
+    if (!song) return;
+    setSpotifyLinkInput(
+      song.spotifyTrackId ? `https://open.spotify.com/track/${song.spotifyTrackId}` : "",
+    );
+    setSpotifyStatus(null);
+  }, [song?.spotifyTrackId, song]);
+
+  const handleSaveSpotifyLink = (overrideValue?: string) => {
+    if (!song) return;
+    const value = (overrideValue ?? spotifyLinkInput).trim();
+    let nextId: string | undefined;
+
+    if (value) {
+      const extracted = extractSpotifyTrackId(value);
+      if (!extracted) {
+        setSpotifyStatus({
+          type: "error",
+          message: "Enter a valid Spotify track URL, URI, or ID.",
+        });
+        return;
+      }
+      nextId = extracted;
+    }
+
+    setSongs((current) =>
+      current.map((entry) =>
+        entry.id === song.id ? { ...entry, spotifyTrackId: nextId } : entry,
+      ),
+    );
+
+    setSpotifyStatus({
+      type: "success",
+      message: nextId ? "Spotify link saved." : "Spotify link cleared.",
+    });
+  };
+
+  const handleClearSpotifyLink = () => {
+    setSpotifyLinkInput("");
+    setSpotifyStatus(null);
+    handleSaveSpotifyLink("");
+  };
 
   // Simple vertical auto-scroll for the tab text. Speed is a scalar
   // (0.1x–3.0x) applied to a base pixels-per-second value.
@@ -333,35 +383,109 @@ export default function SongDetailPage() {
             Back to playlists
           </Link>
         )}
-        <section className="space-y-1 rounded-md border border-dashed border-zinc-300 bg-white/70 p-2 text-[11px] text-zinc-700 shadow-sm dark:border-zinc-700 dark:bg-zinc-900/70 dark:text-zinc-200">
-          <div className="flex items-center justify-between gap-2">
-            <span className="font-medium">Song notes</span>
-            <button
-              type="button"
-              onClick={() => setNotesOpen((prev) => !prev)}
-              className={subtleActionButtonClass}
-            >
-              {notesOpen ? "Hide notes" : hasNotes ? "Show notes" : "Add notes"}
-            </button>
-          </div>
-          {notesOpen && (
-            <textarea
-              value={currentNotes}
-              onChange={(event) =>
-                setNotesBySongId((current) => ({
-                  ...current,
-                  [songId]: event.target.value,
-                }))
-              }
-              rows={3}
-              placeholder="Add reminders, cues, capo info, etc. for this tab…"
-              className="mt-1 w-full resize-y rounded-md border border-zinc-300 bg-white px-2 py-1 text-[11px] text-zinc-800 shadow-inner outline-none focus:border-zinc-500 focus:ring-0 dark:border-zinc-700 dark:bg-black dark:text-zinc-50 dark:focus:border-zinc-400"
-            />
-          )}
-        </section>
+        {!controlsCollapsed && (
+          <>
+            <section className="space-y-1 rounded-md border border-dashed border-zinc-300 bg-white/70 p-2 text-[11px] text-zinc-700 shadow-sm dark:border-zinc-700 dark:bg-zinc-900/70 dark:text-zinc-200">
+              <div className="flex items-center justify-between gap-2">
+                <span className="font-medium">Song notes</span>
+                <button
+                  type="button"
+                  onClick={() => setNotesOpen((prev) => !prev)}
+                  className={subtleActionButtonClass}
+                >
+                  {notesOpen ? "Hide notes" : hasNotes ? "Show notes" : "Add notes"}
+                </button>
+              </div>
+              {notesOpen && (
+                <textarea
+                  value={currentNotes}
+                  onChange={(event) =>
+                    setNotesBySongId((current) => ({
+                      ...current,
+                      [songId]: event.target.value,
+                    }))
+                  }
+                  rows={3}
+                  placeholder="Add reminders, cues, capo info, etc. for this tab…"
+                  className="mt-1 w-full resize-y rounded-md border border-zinc-300 bg-white px-2 py-1 text-[11px] text-zinc-800 shadow-inner outline-none focus:border-zinc-500 focus:ring-0 dark:border-zinc-700 dark:bg-black dark:text-zinc-50 dark:focus:border-zinc-400"
+                />
+              )}
+            </section>
+            <section className="space-y-2 rounded-md border border-dashed border-zinc-300 bg-white/70 p-2 text-[11px] text-zinc-700 shadow-sm dark:border-zinc-700 dark:bg-zinc-900/70 dark:text-zinc-200">
+              <div className="flex items-center justify-between gap-2">
+                <span className="font-medium">Spotify track</span>
+                {song?.spotifyTrackId ? (
+                  <Link
+                    href={`https://open.spotify.com/track/${song.spotifyTrackId}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-[10px] font-medium text-zinc-500 transition hover:text-[#1DB954]"
+                  >
+                    Open current link
+                  </Link>
+                ) : null}
+              </div>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <input
+                  type="text"
+                  value={spotifyLinkInput}
+                  onChange={(event) => setSpotifyLinkInput(event.target.value)}
+                  placeholder="Paste Spotify track URL, URI, or ID"
+                  className="flex-1 rounded-md border border-zinc-300 bg-white px-2 py-1 text-[11px] text-zinc-800 shadow-inner outline-none focus:border-zinc-500 focus:ring-0 dark:border-zinc-700 dark:bg-black dark:text-zinc-50 dark:focus:border-zinc-400"
+                />
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleSaveSpotifyLink()}
+                    className={subtleActionButtonClass}
+                  >
+                    Save
+                  </button>
+                  {song?.spotifyTrackId ? (
+                    <button
+                      type="button"
+                      onClick={() => handleClearSpotifyLink()}
+                      className={subtleActionButtonClass}
+                    >
+                      Clear
+                    </button>
+                  ) : null}
+                </div>
+              </div>
+              {spotifyStatus ? (
+                <p
+                  className={
+                    spotifyStatus.type === "error"
+                      ? "text-xs text-red-600 dark:text-red-400"
+                      : "text-xs text-emerald-600 dark:text-emerald-400"
+                  }
+                >
+                  {spotifyStatus.message}
+                </p>
+              ) : (
+                <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                  Example URL: https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC
+                </p>
+              )}
+            </section>
+          </>
+        )}
         {!controlsCollapsed && (
           <div className="space-y-1">
-            <h1 className="text-2xl font-semibold tracking-tight">{song.title}</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-semibold tracking-tight">{song.title}</h1>
+              {song.spotifyTrackId ? (
+                <Link
+                  href={`https://open.spotify.com/track/${song.spotifyTrackId}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-zinc-500 transition hover:text-[#1DB954]"
+                  aria-label="Open on Spotify"
+                >
+                  <SpotifyIcon className="h-5 w-5" aria-hidden="true" />
+                </Link>
+              ) : null}
+            </div>
             <p className="text-sm text-zinc-600 dark:text-zinc-400">{song.artist}</p>
             {song.ugTabType ? (
               <p className="text-xs text-zinc-500 dark:text-zinc-500">
@@ -513,4 +637,20 @@ function decodeHtmlEntities(value: string): string {
       .replace(/&lt;/g, "<")
       .replace(/&gt;/g, ">")
   );
+}
+
+function extractSpotifyTrackId(value: string): string | undefined {
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
+
+  const directIdMatch = trimmed.match(/^[0-9A-Za-z]{22}$/);
+  if (directIdMatch) return trimmed;
+
+  const trackUrlMatch = trimmed.match(/track[/:]([0-9A-Za-z]{22})/);
+  if (trackUrlMatch) return trackUrlMatch[1];
+
+  const uriMatch = trimmed.match(/spotify:track:([0-9A-Za-z]{22})/);
+  if (uriMatch) return uriMatch[1];
+
+  return undefined;
 }

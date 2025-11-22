@@ -8,6 +8,7 @@ import { DataType, SortingMode } from "ka-table/enums";
 
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import type { Playlist, PlaylistItem, Song } from "@/lib/models";
+import { SpotifyIcon } from "@/components/icons/SpotifyIcon";
 
 type TableStateSnapshot = Record<string, unknown>;
 
@@ -212,15 +213,24 @@ export default function PlaylistDetailPage() {
                     if (props.column.key === "title") {
                       const row = props.rowData as (typeof data)[number];
                       return (
-                        <div className="flex flex-col gap-0.5">
-                          <div className="font-medium text-zinc-900 dark:text-zinc-50">
+                        <div className="flex items-center gap-2 font-medium text-zinc-900 dark:text-zinc-50">
+                          <Link
+                            href={`/songs/${row.songId}?playlistId=${playlistId}`}
+                            className="hover:underline"
+                          >
+                            {row.title}
+                          </Link>
+                          {row.song.spotifyTrackId ? (
                             <Link
-                              href={`/songs/${row.songId}?playlistId=${playlistId}`}
-                              className="hover:underline"
+                              href={`https://open.spotify.com/track/${row.song.spotifyTrackId}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-zinc-500 transition hover:text-[#1DB954]"
+                              aria-label={`Open ${row.title} on Spotify`}
                             >
-                              {row.title}
+                              <SpotifyIcon className="h-4 w-4" aria-hidden="true" />
                             </Link>
-                          </div>
+                          ) : null}
                         </div>
                       );
                     }
