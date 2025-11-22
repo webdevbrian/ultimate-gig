@@ -1,10 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { Table, useTable } from "ka-table";
 import { DataType, SortingMode, EditingMode } from "ka-table/enums";
+import { BarChart } from '@mui/x-charts/BarChart';
+import { PieChart } from '@mui/x-charts/PieChart';
+import { LineChart } from '@mui/x-charts/LineChart';
 import { useLocalStorage } from "@/hooks/useLocalStorage";
+import { decodeHtmlEntities } from "@/lib/utils";
 import type {
   Playlist,
   PlaylistItem,
@@ -19,7 +23,7 @@ export default function Home() {
     "ultimate-gig:playlists",
     [],
   );
-  const [, setSongs] = useLocalStorage<Song[]>("ultimate-gig:songs", []);
+  const [songs, setSongs] = useLocalStorage<Song[]>("ultimate-gig:songs", []);
   const [, setPlaylistItems] = useLocalStorage<PlaylistItem[]>(
     "ultimate-gig:playlist-items",
     [],
@@ -36,6 +40,37 @@ export default function Home() {
     "ultimate-gig:ui:playlists-table",
     {} as any,
   );
+
+  // Dark mode detection
+  const [isDarkMode, setIsDarkMode] = useState(false);
+
+  // Charts visibility toggle
+  const [chartsVisible, setChartsVisible] = useLocalStorage<boolean>(
+    "ultimate-gig:ui:charts-visible",
+    true,
+  );
+
+  useEffect(() => {
+    const checkDarkMode = () => {
+      const isDark = document.documentElement.classList.contains('dark') ||
+        (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      setIsDarkMode(isDark);
+    };
+
+    checkDarkMode();
+
+    // Listen for theme changes
+    const observer = new MutationObserver(checkDarkMode);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    mediaQuery.addEventListener('change', checkDarkMode);
+
+    return () => {
+      observer.disconnect();
+      mediaQuery.removeEventListener('change', checkDarkMode);
+    };
+  }, []);
 
   const playlistsTable = useTable({
     onDispatch: (_action, tableState) => {
@@ -56,6 +91,78 @@ export default function Home() {
       lastSynced: p.lastSyncedAt ? new Date(p.lastSyncedAt).toLocaleString() : "—",
     }));
   }, [playlists, search]);
+
+  // Chart data processing
+  const chartData = useMemo(() => {
+    // Filter songs that have been played (have playCount > 0)
+    const playedSongs = songs.filter(song => (song.playCount || 0) > 0);
+
+    // Top 10 played songs with colors
+    const songColors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#84cc16', '#f97316', '#ec4899', '#6366f1'];
+    const topSongs = playedSongs
+      .sort((a, b) => (b.playCount || 0) - (a.playCount || 0))
+      .slice(0, 10)
+      .map((song, index) => ({
+        id: song.id,
+        title: decodeHtmlEntities(song.title),
+        artist: decodeHtmlEntities(song.artist),
+        plays: song.playCount || 0,
+        label: `${decodeHtmlEntities(song.artist)} - ${decodeHtmlEntities(song.title)}`,
+        color: songColors[index % songColors.length],
+      }));
+
+    // Top 10 played artists (aggregate by artist)
+    const artistPlays = playedSongs.reduce((acc, song) => {
+      const artist = decodeHtmlEntities(song.artist);
+      acc[artist] = (acc[artist] || 0) + (song.playCount || 0);
+      return acc;
+    }, {} as Record<string, number>);
+
+    const topArtists = Object.entries(artistPlays)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 10)
+      .map(([artist, plays]) => ({
+        artist,
+        plays,
+        id: artist,
+        label: artist,
+        value: plays,
+      }));
+
+    // Play activity over time (last 30 days)
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const dailyPlays = playedSongs
+      .filter(song => song.lastPlayedAt && new Date(song.lastPlayedAt) >= thirtyDaysAgo)
+      .reduce((acc, song) => {
+        if (!song.lastPlayedAt) return acc;
+        const date = new Date(song.lastPlayedAt).toISOString().split('T')[0];
+        acc[date] = (acc[date] || 0) + (song.playCount || 0);
+        return acc;
+      }, {} as Record<string, number>);
+
+    // Fill in missing dates with 0
+    const activityData = [];
+    for (let i = 29; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      const dateStr = date.toISOString().split('T')[0];
+      activityData.push({
+        date: dateStr,
+        plays: dailyPlays[dateStr] || 0,
+        label: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      });
+    }
+
+    return {
+      topSongs,
+      topArtists,
+      activityData,
+      totalPlays: playedSongs.reduce((sum, song) => sum + (song.playCount || 0), 0),
+      totalPlayedSongs: playedSongs.length,
+    };
+  }, [songs]);
 
   async function handleImportSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -256,6 +363,255 @@ export default function Home() {
 
   return (
     <div className="space-y-6">
+      {/* Charts Section */}
+      {chartData.totalPlays > 0 && (
+        <section className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <h2 className="text-xl font-semibold tracking-tight">Practice Overview</h2>
+              <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                {chartData.totalPlays} total plays across {chartData.totalPlayedSongs} songs
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setChartsVisible(!chartsVisible)}
+              className="inline-flex items-center justify-center rounded border border-zinc-300 bg-white px-2 py-0.5 text-[11px] font-medium text-zinc-700 shadow-sm transition hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
+            >
+              {chartsVisible ? "Hide charts" : "Show charts"}
+            </button>
+          </div>
+
+          {chartsVisible && (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            {/* Top Played Songs */}
+            <div className="bg-white dark:bg-zinc-900 p-3 rounded-lg border border-zinc-200 dark:border-white/10">
+              <h3 className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+                Top Played Songs
+              </h3>
+              {chartData.topSongs.length > 0 ? (
+                <div style={{ position: 'relative', width: '100%', height: '180px' }}>
+                  <BarChart
+                    dataset={chartData.topSongs}
+                    xAxis={[{
+                      scaleType: 'linear',
+                      min: 0,
+                      max: Math.max(...chartData.topSongs.map(s => s.plays)) + 1,
+                      tickNumber: Math.max(...chartData.topSongs.map(s => s.plays)) + 2
+                    }]}
+                    yAxis={[{
+                      scaleType: 'band',
+                      dataKey: 'label',
+                      tickLabelStyle: { display: 'none' }
+                    }]}
+                    series={[{
+                      dataKey: 'plays',
+                      valueFormatter: (value) => `${value} plays`
+                    }]}
+                    layout="horizontal"
+                    height={120}
+                    margin={{ left: 0, right: 10, top: 10, bottom: 10 }}
+                    colors={chartData.topSongs.map(song => song.color)}
+                    sx={{
+                      width: '100%',
+                      '& .MuiChartsLegend-root': {
+                        display: 'none !important'
+                      },
+                      '& .MuiChartsAxis-tickLabel': {
+                        fill: isDarkMode ? '#ffffff !important' : '#000000 !important',
+                        fontSize: '11px !important'
+                      },
+                      '& .MuiChartsAxis-line': {
+                        stroke: isDarkMode ? '#ffffff !important' : '#000000 !important'
+                      },
+                      '& .MuiChartsAxis-tick': {
+                        stroke: isDarkMode ? '#ffffff !important' : '#000000 !important'
+                      },
+                      '& line': {
+                        stroke: isDarkMode ? '#ffffff !important' : '#000000 !important'
+                      },
+                      '& path': {
+                        stroke: isDarkMode ? '#ffffff !important' : '#000000 !important'
+                      },
+                      '& text': {
+                        fill: isDarkMode ? '#ffffff !important' : '#000000 !important'
+                      },
+                      ...Object.fromEntries(
+                        chartData.topSongs.map((song, index) => [
+                          `& .MuiBarElement-series-auto-generated-id-0:nth-of-type(${index + 1})`,
+                          { fill: `${song.color} !important` }
+                        ])
+                      )
+                    }}
+                  />
+                  <div style={{
+                    position: 'absolute',
+                    bottom: '10px',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    maxWidth: '100%',
+                    padding: '0 8px'
+                  }}>
+                    {chartData.topSongs.map((song, index) => (
+                      <div key={song.id} style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        fontSize: '11px',
+                        color: isDarkMode ? '#ffffff' : '#000000'
+                      }}>
+                        <div style={{
+                          width: '8px',
+                          height: '8px',
+                          backgroundColor: song.color,
+                          borderRadius: '2px'
+                        }} />
+                        <span>{song.label}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 text-center py-8">
+                  No played songs yet
+                </p>
+              )}
+            </div>
+
+            {/* Top Played Artists */}
+            <div className="bg-white dark:bg-zinc-900 p-3 rounded-lg border border-zinc-200 dark:border-white/10">
+              <h3 className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+                Top Played Artists
+              </h3>
+              {chartData.topArtists.length > 0 ? (
+                <div style={{ position: 'relative', width: '100%', height: '240px' }}>
+                  <PieChart
+                    series={[
+                      {
+                        data: chartData.topArtists,
+                        highlightScope: { fade: 'global', highlight: 'item' },
+                        innerRadius: 35,
+                        outerRadius: 80,
+                      },
+                    ]}
+                    width={300}
+                    height={200}
+                    margin={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    sx={{
+                      width: '100%',
+                      '& .MuiChartsLegend-root': {
+                        display: 'none !important'
+                      },
+                      '& .MuiChartsTooltip-paper': {
+                        backgroundColor: isDarkMode ? '#27272a' : '#ffffff',
+                        color: isDarkMode ? '#ffffff' : '#000000',
+                        border: `1px solid ${isDarkMode ? '#52525b' : '#d4d4d8'}`
+                      },
+                      '& text': {
+                        fill: isDarkMode ? '#ffffff !important' : '#000000 !important'
+                      }
+                    }}
+                  />
+                  <div style={{
+                    position: 'absolute',
+                    bottom: '0px',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    maxWidth: '100%',
+                    padding: '0 8px'
+                  }}>
+                    {chartData.topArtists.map((artist, index) => (
+                      <div key={artist.id} style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        fontSize: '11px',
+                        color: isDarkMode ? '#ffffff' : '#000000'
+                      }}>
+                        <div style={{
+                          width: '8px',
+                          height: '8px',
+                          backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#84cc16', '#f97316', '#ec4899', '#6366f1'][index % 10],
+                          borderRadius: '2px'
+                        }} />
+                        <span>{artist.artist}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 text-center py-8">
+                  No played artists yet
+                </p>
+              )}
+            </div>
+
+            {/* Play Activity Over Time */}
+            <div className="bg-white dark:bg-zinc-900 p-3 rounded-lg border border-zinc-200 dark:border-white/10">
+              <h3 className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+                Play Activity (Last 30 Days)
+              </h3>
+              {chartData.activityData.some(d => d.plays > 0) ? (
+                <div style={{ width: '100%', height: '180px' }}>
+                  <LineChart
+                    dataset={chartData.activityData}
+                    xAxis={[{
+                      scaleType: 'point',
+                      dataKey: 'label'
+                    }]}
+                    yAxis={[{}]}
+                    series={[
+                      {
+                        dataKey: 'plays',
+                        color: '#10b981',
+                        curve: 'linear',
+                      },
+                    ]}
+                    height={220}
+                    margin={{ left: 25, right: 10, top: 10, bottom: 40 }}
+                    sx={{
+                      width: '100%',
+                      '& .MuiChartsAxis-tickLabel': {
+                        fill: isDarkMode ? '#ffffff !important' : '#000000 !important',
+                        fontSize: '10px !important'
+                      },
+                      '& .MuiChartsAxis-line': {
+                        stroke: isDarkMode ? '#ffffff !important' : '#000000 !important'
+                      },
+                      '& .MuiChartsAxis-tick': {
+                        stroke: isDarkMode ? '#ffffff !important' : '#000000 !important'
+                      },
+                      '& line': {
+                        stroke: isDarkMode ? '#ffffff !important' : '#000000 !important'
+                      },
+                      '& path': {
+                        stroke: isDarkMode ? '#ffffff !important' : '#000000 !important'
+                      },
+                      '& text': {
+                        fill: isDarkMode ? '#ffffff !important' : '#000000 !important'
+                      }
+                    }}
+                  />
+                </div>
+              ) : (
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 text-center py-8">
+                  No recent activity
+                </p>
+              )}
+            </div>
+            </div>
+          )}
+        </section>
+      )}
+
       <section className="space-y-1">
         <h1 className="text-2xl font-semibold tracking-tight">Playlists</h1>
         <p className="text-sm text-zinc-600 dark:text-zinc-400">
