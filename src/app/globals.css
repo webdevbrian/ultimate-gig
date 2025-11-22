@@ -68,6 +68,15 @@
   gap: 0.25rem;
 }
 
+.ka-icon {
+  color: #3f3f46;
+  fill: currentColor;
+}
+
+.dark .ka-icon {
+  color: #e4e4e7;
+}
+
 .ka-icon-sort {
   margin-left: 0.25rem;
 }

@@ -9,6 +9,7 @@ import { DataType, SortingMode } from "ka-table/enums";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import type { Playlist, PlaylistItem, Song } from "@/lib/models";
 import { SpotifyIcon } from "@/components/icons/SpotifyIcon";
+import { YoutubeIcon } from "@/components/icons/YoutubeIcon";
 
 type TableStateSnapshot = Record<string, unknown>;
 
@@ -229,6 +230,17 @@ export default function PlaylistDetailPage() {
                               aria-label={`Open ${row.title} on Spotify`}
                             >
                               <SpotifyIcon className="h-4 w-4" aria-hidden="true" />
+                            </Link>
+                          ) : null}
+                          {row.song.youtubeUrl ? (
+                            <Link
+                              href={row.song.youtubeUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-zinc-500 transition hover:text-[#FF0000]"
+                              aria-label={`Open ${row.title} on YouTube`}
+                            >
+                              <YoutubeIcon className="h-4 w-4" aria-hidden="true" />
                             </Link>
                           ) : null}
                         </div>

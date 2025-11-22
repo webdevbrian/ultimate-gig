@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { SpotifyIcon } from "@/components/icons/SpotifyIcon";
+import { YoutubeIcon } from "@/components/icons/YoutubeIcon";
 
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import type { PlaylistItem, Song, UgTabResponse } from "@/lib/models";
@@ -49,8 +50,8 @@ export default function SongDetailPage() {
     "ultimate-gig:ui:tab-notes-open",
     false,
   );
-  const [spotifyLinkInput, setSpotifyLinkInput] = useState("");
-  const [spotifyStatus, setSpotifyStatus] = useState<
+  const [mediaLinkInput, setMediaLinkInput] = useState("");
+  const [mediaStatus, setMediaStatus] = useState<
     | { type: "success"; message: string }
     | { type: "error"; message: string }
     | null
@@ -173,45 +174,60 @@ export default function SongDetailPage() {
 
   useEffect(() => {
     if (!song) return;
-    setSpotifyLinkInput(
-      song.spotifyTrackId ? `https://open.spotify.com/track/${song.spotifyTrackId}` : "",
-    );
-    setSpotifyStatus(null);
-  }, [song?.spotifyTrackId, song]);
+    const nextValue = song.spotifyTrackId
+      ? `https://open.spotify.com/track/${song.spotifyTrackId}`
+      : song.youtubeUrl
+        ? song.youtubeUrl
+        : "";
+    setMediaLinkInput(nextValue);
+    setMediaStatus(null);
+  }, [song?.spotifyTrackId, song?.youtubeUrl, song]);
 
-  const handleSaveSpotifyLink = (overrideValue?: string) => {
+  const handleSaveMediaLink = (overrideValue?: string) => {
     if (!song) return;
-    const value = (overrideValue ?? spotifyLinkInput).trim();
-    let nextId: string | undefined;
+    const value = (overrideValue ?? mediaLinkInput).trim();
 
-    if (value) {
-      const extracted = extractSpotifyTrackId(value);
-      if (!extracted) {
-        setSpotifyStatus({
-          type: "error",
-          message: "Enter a valid Spotify track URL, URI, or ID.",
-        });
-        return;
-      }
-      nextId = extracted;
+    if (!value) {
+      setSongs((current) =>
+        current.map((entry) =>
+          entry.id === song.id
+            ? { ...entry, spotifyTrackId: undefined, youtubeUrl: undefined }
+            : entry,
+        ),
+      );
+      setMediaStatus({ type: "success", message: "Streaming link cleared." });
+      return;
+    }
+
+    const parsed = parseMediaLink(value);
+    if (!parsed) {
+      setMediaStatus({
+        type: "error",
+        message: "Enter a valid Spotify track URL/URI or YouTube link.",
+      });
+      return;
     }
 
     setSongs((current) =>
-      current.map((entry) =>
-        entry.id === song.id ? { ...entry, spotifyTrackId: nextId } : entry,
-      ),
+      current.map((entry) => {
+        if (entry.id !== song.id) return entry;
+        if (parsed.type === "spotify") {
+          return { ...entry, spotifyTrackId: parsed.trackId };
+        }
+        return { ...entry, youtubeUrl: parsed.url };
+      }),
     );
 
-    setSpotifyStatus({
+    setMediaStatus({
       type: "success",
-      message: nextId ? "Spotify link saved." : "Spotify link cleared.",
+      message: `Link saved for ${parsed.type === "spotify" ? "Spotify" : "YouTube"}.`,
     });
   };
 
-  const handleClearSpotifyLink = () => {
-    setSpotifyLinkInput("");
-    setSpotifyStatus(null);
-    handleSaveSpotifyLink("");
+  const handleClearMediaLink = () => {
+    setMediaLinkInput("");
+    setMediaStatus(null);
+    handleSaveMediaLink("");
   };
 
   // Simple vertical auto-scroll for the tab text. Speed is a scalar
@@ -413,58 +429,70 @@ export default function SongDetailPage() {
             </section>
             <section className="space-y-2 rounded-md border border-dashed border-zinc-300 bg-white/70 p-2 text-[11px] text-zinc-700 shadow-sm dark:border-zinc-700 dark:bg-zinc-900/70 dark:text-zinc-200">
               <div className="flex items-center justify-between gap-2">
-                <span className="font-medium">Spotify track</span>
-                {song?.spotifyTrackId ? (
-                  <Link
-                    href={`https://open.spotify.com/track/${song.spotifyTrackId}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-[10px] font-medium text-zinc-500 transition hover:text-[#1DB954]"
-                  >
-                    Open current link
-                  </Link>
-                ) : null}
+                <span className="font-medium">Streaming link</span>
+                <div className="flex flex-wrap items-center gap-2">
+                  {song?.spotifyTrackId ? (
+                    <Link
+                      href={`https://open.spotify.com/track/${song.spotifyTrackId}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-[10px] font-medium text-zinc-500 transition hover:text-[#1DB954]"
+                    >
+                      Open on Spotify
+                    </Link>
+                  ) : null}
+                  {song?.youtubeUrl ? (
+                    <Link
+                      href={song.youtubeUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-[10px] font-medium text-zinc-500 transition hover:text-[#FF0000]"
+                    >
+                      Open on YouTube
+                    </Link>
+                  ) : null}
+                </div>
               </div>
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                 <input
                   type="text"
-                  value={spotifyLinkInput}
-                  onChange={(event) => setSpotifyLinkInput(event.target.value)}
-                  placeholder="Paste Spotify track URL, URI, or ID"
+                  value={mediaLinkInput}
+                  onChange={(event) => setMediaLinkInput(event.target.value)}
+                  placeholder="Paste Spotify or YouTube link"
                   className="flex-1 rounded-md border border-zinc-300 bg-white px-2 py-1 text-[11px] text-zinc-800 shadow-inner outline-none focus:border-zinc-500 focus:ring-0 dark:border-zinc-700 dark:bg-black dark:text-zinc-50 dark:focus:border-zinc-400"
                 />
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    onClick={() => handleSaveSpotifyLink()}
+                    onClick={() => handleSaveMediaLink()}
                     className={subtleActionButtonClass}
                   >
                     Save
                   </button>
-                  {song?.spotifyTrackId ? (
+                  {(song?.spotifyTrackId || song?.youtubeUrl) && (
                     <button
                       type="button"
-                      onClick={() => handleClearSpotifyLink()}
+                      onClick={() => handleClearMediaLink()}
                       className={subtleActionButtonClass}
                     >
                       Clear
                     </button>
-                  ) : null}
+                  )}
                 </div>
               </div>
-              {spotifyStatus ? (
+              {mediaStatus ? (
                 <p
                   className={
-                    spotifyStatus.type === "error"
+                    mediaStatus.type === "error"
                       ? "text-xs text-red-600 dark:text-red-400"
                       : "text-xs text-emerald-600 dark:text-emerald-400"
                   }
                 >
-                  {spotifyStatus.message}
+                  {mediaStatus.message}
                 </p>
               ) : (
                 <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                  Example URL: https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC
+                  Examples: https://open.spotify.com/track/… or https://youtu.be/…
                 </p>
               )}
             </section>
@@ -474,17 +502,30 @@ export default function SongDetailPage() {
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <h1 className="text-2xl font-semibold tracking-tight">{song.title}</h1>
-              {song.spotifyTrackId ? (
-                <Link
-                  href={`https://open.spotify.com/track/${song.spotifyTrackId}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-zinc-500 transition hover:text-[#1DB954]"
-                  aria-label="Open on Spotify"
-                >
-                  <SpotifyIcon className="h-5 w-5" aria-hidden="true" />
-                </Link>
-              ) : null}
+              <div className="flex items-center gap-2">
+                {song.spotifyTrackId ? (
+                  <Link
+                    href={`https://open.spotify.com/track/${song.spotifyTrackId}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-zinc-500 transition hover:text-[#1DB954]"
+                    aria-label="Open on Spotify"
+                  >
+                    <SpotifyIcon className="h-5 w-5" aria-hidden="true" />
+                  </Link>
+                ) : null}
+                {song.youtubeUrl ? (
+                  <Link
+                    href={song.youtubeUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-zinc-500 transition hover:text-[#FF0000]"
+                    aria-label="Open on YouTube"
+                  >
+                    <YoutubeIcon className="h-5 w-5" aria-hidden="true" />
+                  </Link>
+                ) : null}
+              </div>
             </div>
             <p className="text-sm text-zinc-600 dark:text-zinc-400">{song.artist}</p>
             {song.ugTabType ? (
@@ -639,6 +680,10 @@ function decodeHtmlEntities(value: string): string {
   );
 }
 
+type MediaLinkInfo =
+  | { type: "spotify"; trackId: string; url: string }
+  | { type: "youtube"; videoId: string; url: string };
+
 function extractSpotifyTrackId(value: string): string | undefined {
   const trimmed = value.trim();
   if (!trimmed) return undefined;
@@ -653,4 +698,52 @@ function extractSpotifyTrackId(value: string): string | undefined {
   if (uriMatch) return uriMatch[1];
 
   return undefined;
+}
+
+function extractYoutubeVideoId(value: string): string | undefined {
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
+
+  try {
+    const url = new URL(trimmed);
+    const host = url.hostname.toLowerCase();
+    if (host.includes("youtube.com")) {
+      if (url.searchParams.get("v")) return url.searchParams.get("v") ?? undefined;
+      if (url.pathname.startsWith("/shorts/")) {
+        return url.pathname.split("/")[2] ?? undefined;
+      }
+    }
+    if (host.includes("youtu.be")) {
+      return url.pathname.slice(1) || undefined;
+    }
+  } catch {
+    const match = trimmed.match(/youtu(?:\.be|be\.com)\/([0-9A-Za-z_-]{11})/);
+    if (match) return match[1];
+  }
+
+  const directIdMatch = trimmed.match(/^[0-9A-Za-z_-]{11}$/);
+  if (directIdMatch) return trimmed;
+  return undefined;
+}
+
+function parseMediaLink(value: string): MediaLinkInfo | null {
+  const spotifyId = extractSpotifyTrackId(value);
+  if (spotifyId) {
+    return {
+      type: "spotify",
+      trackId: spotifyId,
+      url: `https://open.spotify.com/track/${spotifyId}`,
+    };
+  }
+
+  const youtubeId = extractYoutubeVideoId(value);
+  if (youtubeId) {
+    return {
+      type: "youtube",
+      videoId: youtubeId,
+      url: `https://www.youtube.com/watch?v=${youtubeId}`,
+    };
+  }
+
+  return null;
 }
