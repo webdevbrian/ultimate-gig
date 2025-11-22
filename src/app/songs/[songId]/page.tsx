@@ -56,6 +56,10 @@ export default function SongDetailPage() {
     | { type: "error"; message: string }
     | null
   >(null);
+  const [canMarkAsPlayed, setCanMarkAsPlayed] = useLocalStorage<boolean>(
+    `ultimate-gig:ui:can-mark-played-${songId}`,
+    true,
+  );
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const subtleActionButtonClass =
     "inline-flex items-center justify-center rounded border border-zinc-300 bg-white px-2 py-0.5 text-[11px] font-medium text-zinc-700 shadow-sm transition hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800";
@@ -183,6 +187,11 @@ export default function SongDetailPage() {
     setMediaStatus(null);
   }, [song?.spotifyTrackId, song?.youtubeUrl, song]);
 
+  // Reset ability to mark as played when song changes (fresh load)
+  useEffect(() => {
+    setCanMarkAsPlayed(true);
+  }, [songId, setCanMarkAsPlayed]);
+
   const handleSaveMediaLink = (overrideValue?: string) => {
     if (!song) return;
     const value = (overrideValue ?? mediaLinkInput).trim();
@@ -228,6 +237,24 @@ export default function SongDetailPage() {
     setMediaLinkInput("");
     setMediaStatus(null);
     handleSaveMediaLink("");
+  };
+
+  const handleMarkAsPlayed = () => {
+    if (!song || !canMarkAsPlayed) return;
+
+    setSongs((current) =>
+      current.map((entry) =>
+        entry.id === song.id
+          ? {
+              ...entry,
+              playCount: (entry.playCount || 0) + 1,
+              lastPlayedAt: new Date().toISOString(),
+            }
+          : entry,
+      ),
+    );
+
+    setCanMarkAsPlayed(false);
   };
 
   // Simple vertical auto-scroll for the tab text. Speed is a scalar
@@ -598,6 +625,19 @@ export default function SongDetailPage() {
                 ))}
               </select>
             </div>
+
+            <button
+              type="button"
+              onClick={handleMarkAsPlayed}
+              disabled={!canMarkAsPlayed}
+              className={`${subtleActionButtonClass} ${
+                !canMarkAsPlayed
+                  ? "opacity-50 cursor-not-allowed"
+                  : "hover:bg-emerald-50 hover:border-emerald-300 hover:text-emerald-700 dark:hover:bg-emerald-950 dark:hover:border-emerald-800 dark:hover:text-emerald-300"
+              }`}
+            >
+              Mark as played
+            </button>
           </div>
         </div>
 

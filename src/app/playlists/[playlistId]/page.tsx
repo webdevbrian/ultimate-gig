@@ -67,6 +67,8 @@ export default function PlaylistDetailPage() {
               song,
               title: song.title,
               artist: song.artist,
+              playCount: song.playCount || 0,
+              lastPlayedAt: song.lastPlayedAt,
               id: `${song.id}-${item.position}`, // Unique row key
               songId: song.id,
             }
@@ -185,6 +187,21 @@ export default function PlaylistDetailPage() {
                   width: 260,
                   isResizable: true,
                 },
+                {
+                  key: "playCount",
+                  title: "Popularity",
+                  dataType: DataType.Number,
+                  width: 90,
+                  isResizable: true,
+                  style: { textAlign: "center" },
+                },
+                {
+                  key: "lastPlayedAt",
+                  title: "Last Played",
+                  dataType: DataType.String,
+                  width: 140,
+                  isResizable: true,
+                },
               ]}
               data={data}
               rowKeyField="id"
@@ -244,6 +261,16 @@ export default function PlaylistDetailPage() {
                             </Link>
                           ) : null}
                         </div>
+                      );
+                    }
+                    if (props.column.key === "lastPlayedAt") {
+                      const row = props.rowData as (typeof data)[number];
+                      if (!row.lastPlayedAt) return <span className="text-zinc-400">Never</span>;
+                      const date = new Date(row.lastPlayedAt);
+                      return (
+                        <span className="text-xs text-zinc-600 dark:text-zinc-400">
+                          {date.toLocaleDateString()} {date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
                       );
                     }
                     return props.value;

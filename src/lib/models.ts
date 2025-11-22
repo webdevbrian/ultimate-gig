@@ -28,6 +28,8 @@ export interface Song {
   ugTabType?: "chords" | "tab" | "pro" | "other";
   spotifyTrackId?: string;
   youtubeUrl?: string;
+  playCount?: number;
+  lastPlayedAt?: string;
 }
 
 export interface TabSettings {
