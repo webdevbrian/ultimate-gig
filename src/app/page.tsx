@@ -414,27 +414,48 @@ export default function Home() {
                     colors={chartData.topSongs.map(song => song.color)}
                     sx={{
                       width: '100%',
+                      marginLeft: '-20px',
                       '& .MuiChartsLegend-root': {
                         display: 'none !important'
                       },
                       '& .MuiChartsAxis-tickLabel': {
-                        fill: isDarkMode ? '#ffffff !important' : '#000000 !important',
+                        fill: '#000000 !important',
                         fontSize: '11px !important'
                       },
                       '& .MuiChartsAxis-line': {
-                        stroke: isDarkMode ? '#ffffff !important' : '#000000 !important'
+                        stroke: '#000000 !important'
                       },
                       '& .MuiChartsAxis-tick': {
-                        stroke: isDarkMode ? '#ffffff !important' : '#000000 !important'
+                        stroke: '#000000 !important'
                       },
                       '& line': {
-                        stroke: isDarkMode ? '#ffffff !important' : '#000000 !important'
+                        stroke: '#000000 !important'
                       },
                       '& path': {
-                        stroke: isDarkMode ? '#ffffff !important' : '#000000 !important'
+                        stroke: '#000000 !important'
                       },
                       '& text': {
-                        fill: isDarkMode ? '#ffffff !important' : '#000000 !important'
+                        fill: '#000000 !important'
+                      },
+                      '.dark &': {
+                        '& .MuiChartsAxis-tickLabel': {
+                          fill: '#ffffff !important'
+                        },
+                        '& .MuiChartsAxis-line': {
+                          stroke: '#ffffff !important'
+                        },
+                        '& .MuiChartsAxis-tick': {
+                          stroke: '#ffffff !important'
+                        },
+                        '& line': {
+                          stroke: '#ffffff !important'
+                        },
+                        '& path': {
+                          stroke: '#ffffff !important'
+                        },
+                        '& text': {
+                          fill: '#ffffff !important'
+                        }
                       },
                       ...Object.fromEntries(
                         chartData.topSongs.map((song, index) => [
@@ -461,9 +482,8 @@ export default function Home() {
                         display: 'flex',
                         alignItems: 'center',
                         gap: '4px',
-                        fontSize: '11px',
-                        color: isDarkMode ? '#ffffff' : '#000000'
-                      }}>
+                        fontSize: '11px'
+                      }} className="text-black dark:text-white">
                         <div style={{
                           width: '8px',
                           height: '8px',
@@ -512,7 +532,12 @@ export default function Home() {
                         border: `1px solid ${isDarkMode ? '#52525b' : '#d4d4d8'}`
                       },
                       '& text': {
-                        fill: isDarkMode ? '#ffffff !important' : '#000000 !important'
+                        fill: '#000000 !important'
+                      },
+                      '.dark &': {
+                        '& text': {
+                          fill: '#ffffff !important'
+                        }
                       }
                     }}
                   />
@@ -533,9 +558,8 @@ export default function Home() {
                         display: 'flex',
                         alignItems: 'center',
                         gap: '4px',
-                        fontSize: '11px',
-                        color: isDarkMode ? '#ffffff' : '#000000'
-                      }}>
+                        fontSize: '11px'
+                      }} className="text-black dark:text-white">
                         <div style={{
                           width: '8px',
                           height: '8px',
@@ -567,7 +591,9 @@ export default function Home() {
                       scaleType: 'point',
                       dataKey: 'label'
                     }]}
-                    yAxis={[{}]}
+                    yAxis={[{
+                      tickLabelStyle: { display: 'none' }
+                    }]}
                     series={[
                       {
                         dataKey: 'plays',
@@ -575,28 +601,49 @@ export default function Home() {
                         curve: 'linear',
                       },
                     ]}
-                    height={220}
-                    margin={{ left: 25, right: 10, top: 10, bottom: 40 }}
+                    height={230}
+                    margin={{ left: 0, right: 10, top: 10, bottom: 40 }}
                     sx={{
                       width: '100%',
+                      marginLeft: '-20px',
                       '& .MuiChartsAxis-tickLabel': {
-                        fill: isDarkMode ? '#ffffff !important' : '#000000 !important',
+                        fill: '#000000 !important',
                         fontSize: '10px !important'
                       },
                       '& .MuiChartsAxis-line': {
-                        stroke: isDarkMode ? '#ffffff !important' : '#000000 !important'
+                        stroke: '#000000 !important'
                       },
                       '& .MuiChartsAxis-tick': {
-                        stroke: isDarkMode ? '#ffffff !important' : '#000000 !important'
+                        stroke: '#000000 !important'
                       },
                       '& line': {
-                        stroke: isDarkMode ? '#ffffff !important' : '#000000 !important'
+                        stroke: '#000000 !important'
                       },
                       '& path': {
-                        stroke: isDarkMode ? '#ffffff !important' : '#000000 !important'
+                        stroke: '#000000 !important'
                       },
                       '& text': {
-                        fill: isDarkMode ? '#ffffff !important' : '#000000 !important'
+                        fill: '#000000 !important'
+                      },
+                      '.dark &': {
+                        '& .MuiChartsAxis-tickLabel': {
+                          fill: '#ffffff !important'
+                        },
+                        '& .MuiChartsAxis-line': {
+                          stroke: '#ffffff !important'
+                        },
+                        '& .MuiChartsAxis-tick': {
+                          stroke: '#ffffff !important'
+                        },
+                        '& line': {
+                          stroke: '#ffffff !important'
+                        },
+                        '& path': {
+                          stroke: '#ffffff !important'
+                        },
+                        '& text': {
+                          fill: '#ffffff !important'
+                        }
                       }
                     }}
                   />
