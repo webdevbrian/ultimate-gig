@@ -10,20 +10,22 @@ function applyTheme(mode: ThemeMode) {
   if (typeof document === "undefined") return;
   const root = document.documentElement;
 
-  // Clear any manual overrides so the media query can apply for "system".
-  root.style.removeProperty("--background");
-  root.style.removeProperty("--foreground");
+  // Reset explicit dark class; we'll re-apply as needed.
+  root.classList.remove("dark");
 
   if (mode === "system") {
-    // Respect the existing CSS + prefers-color-scheme.
+    if (typeof window !== "undefined" && window.matchMedia) {
+      const prefersDark = window.matchMedia(
+        "(prefers-color-scheme: dark)",
+      ).matches;
+      if (prefersDark) root.classList.add("dark");
+    }
     return;
   }
 
-  const isDark = mode === "dark";
-
-  // These match the values defined in globals.css for light/dark.
-  root.style.setProperty("--background", isDark ? "#0a0a0a" : "#ffffff");
-  root.style.setProperty("--foreground", isDark ? "#ededed" : "#171717");
+  if (mode === "dark") {
+    root.classList.add("dark");
+  }
 }
 
 export function ThemeToggle() {

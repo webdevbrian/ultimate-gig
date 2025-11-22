@@ -264,7 +264,7 @@ export default function Home() {
         </p>
       </section>
 
-      <section className="flex flex-col gap-3 rounded-lg border border-zinc-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-black/60">
+      <section className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4 text-sm shadow-sm">
         <form
           className="flex flex-col gap-3 sm:flex-row"
           onSubmit={handleImportSubmit}
@@ -278,7 +278,7 @@ export default function Home() {
               value={importUrl}
               onChange={(e) => setImportUrl(e.target.value)}
               placeholder="https://www.ultimate-guitar.com/user/playlist/shared?h=..."
-              className="mt-1 w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm outline-none ring-0 transition focus:border-zinc-400 dark:border-white/15 dark:bg-black dark:text-white dark:focus:border-white/60"
+              className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground outline-none ring-0 transition focus:border-ring"
             />
           </div>
           <div className="flex items-end">
@@ -313,12 +313,12 @@ export default function Home() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search by playlist name"
-              className="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm outline-none ring-0 transition focus:border-zinc-400 dark:border-white/15 dark:bg-black dark:text-white dark:focus:border-white/60 sm:w-64"
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground outline-none ring-0 transition focus:border-ring sm:w-64"
             />
           </div>
         </div>
 
-        <div className="ka-table-wrapper overflow-hidden rounded-lg border border-zinc-200 bg-white text-sm shadow-sm dark:border-white/10 dark:bg-black/60">
+        <div className="ka-table-wrapper overflow-hidden rounded-lg border border-border bg-card text-sm shadow-sm">
           {data.length === 0 ? (
             <div className="px-4 py-6 text-center text-sm text-zinc-500 dark:text-zinc-400">
               No playlists yet. Import a playlist URL above to get started.
