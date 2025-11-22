@@ -600,15 +600,13 @@ export default function SongDetailPage() {
               </button>
             </div>
 
-            <label className="inline-flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={autoScroll}
-                onChange={(event) => setAutoScroll(event.target.checked)}
-                className="h-3 w-3 rounded border-zinc-400 text-zinc-900 shadow-sm focus:ring-0 dark:border-zinc-600 dark:bg-black"
-              />
-              <span>Auto-scroll</span>
-            </label>
+            <button
+              type="button"
+              onClick={() => setAutoScroll((prev) => !prev)}
+              className={subtleActionButtonClass}
+            >
+              {autoScroll ? "Stop auto-scroll" : "Start auto-scroll"}
+            </button>
             <div className="flex items-center gap-2">
               <span>Speed</span>
               <select

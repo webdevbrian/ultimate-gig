@@ -41,9 +41,9 @@ export default function RootLayout({
                 </div>
                 <ThemeToggle />
               </div>
-              <span className="text-xs text-zinc-500 dark:text-zinc-400">
+              {/* <span className="text-xs text-zinc-500 dark:text-zinc-400">
                 Local & offline-friendly
-              </span>
+              </span> */}
             </div>
           </header>
           <main className="flex-1 min-h-0 px-4 pt-6 pb-0 flex flex-col">
