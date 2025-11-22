@@ -358,7 +358,7 @@ export default function SongDetailPage() {
   const decreaseFontSize = () => {
     setTabFontSize((current) => {
       const value = Number.isFinite(current) ? current : 12;
-      return Math.max(10, value - 1);
+      return Math.max(6, value - 1);
     });
   };
 
