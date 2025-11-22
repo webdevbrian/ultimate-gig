@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import type { Song, UgTabResponse } from "@/lib/models";
@@ -28,6 +28,10 @@ export default function SongDetailPage() {
     "ultimate-gig:ui:tab-scroll-speed",
     1,
   );
+  const [tabFontSize, setTabFontSize] = useLocalStorage<number>(
+    "ultimate-gig:ui:tab-font-size",
+    12,
+  );
   const [controlsCollapsed, setControlsCollapsed] = useLocalStorage<boolean>(
     "ultimate-gig:ui:tab-header-collapsed",
     false,
@@ -41,6 +45,35 @@ export default function SongDetailPage() {
     false,
   );
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+  const subtleActionButtonClass =
+    "inline-flex items-center justify-center rounded border border-zinc-300 bg-white px-2 py-0.5 text-[11px] font-medium text-zinc-700 shadow-sm transition hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800";
+
+  const updateScrollContainerHeight = useCallback(() => {
+    if (typeof window === "undefined") return;
+
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    const rect = container.getBoundingClientRect();
+    const viewportHeight = window.innerHeight;
+    const available = viewportHeight - rect.top - 16;
+
+    if (available > 0) {
+      container.style.maxHeight = `${available}px`;
+    } else {
+      container.style.removeProperty("max-height");
+    }
+  }, []);
+
+  const setScrollContainerRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      scrollContainerRef.current = node;
+      if (node) {
+        updateScrollContainerHeight();
+      }
+    },
+    [updateScrollContainerHeight],
+  );
 
   const song = useMemo(
     () => (songsHydrated ? songs.find((s) => s.id === songId) : undefined),
@@ -178,35 +211,42 @@ export default function SongDetailPage() {
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    const updateMaxHeight = () => {
-      const container = scrollContainerRef.current;
-      if (!container) return;
-
-      const rect = container.getBoundingClientRect();
-      const viewportHeight = window.innerHeight;
-      const available = viewportHeight - rect.top - 16; // 16px bottom offset
-
-      if (available > 0) {
-        container.style.maxHeight = `${available}px`;
-      } else {
-        container.style.removeProperty("max-height");
-      }
-    };
-
-    updateMaxHeight();
-    window.addEventListener("resize", updateMaxHeight);
+    const rafId = window.requestAnimationFrame(updateScrollContainerHeight);
+    window.addEventListener("resize", updateScrollContainerHeight);
 
     return () => {
-      window.removeEventListener("resize", updateMaxHeight);
+      window.cancelAnimationFrame(rafId);
+      window.removeEventListener("resize", updateScrollContainerHeight);
     };
-  }, [controlsCollapsed, notesOpen]);
+  }, [
+    controlsCollapsed,
+    notesOpen,
+    rawTabText,
+    isLoading,
+    song?.id,
+    updateScrollContainerHeight,
+  ]);
+
+  const increaseFontSize = () => {
+    setTabFontSize((current) => {
+      const value = Number.isFinite(current) ? current : 12;
+      return Math.min(24, value + 1);
+    });
+  };
+
+  const decreaseFontSize = () => {
+    setTabFontSize((current) => {
+      const value = Number.isFinite(current) ? current : 12;
+      return Math.max(10, value - 1);
+    });
+  };
 
   if (!songsHydrated) {
     return (
       <div className="space-y-4">
         <Link
           href={playlistId ? `/playlists/${playlistId}` : "/"}
-          className="text-xs font-medium text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
+          className={subtleActionButtonClass}
         >
           Back
         </Link>
@@ -222,7 +262,7 @@ export default function SongDetailPage() {
       <div className="space-y-4">
         <Link
           href={playlistId ? `/playlists/${playlistId}` : "/"}
-          className="text-xs font-medium text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
+          className={subtleActionButtonClass}
         >
           Back
         </Link>
@@ -235,10 +275,10 @@ export default function SongDetailPage() {
 
   return (
     <div className="flex flex-1 min-h-0 w-full flex-col space-y-6">
-      <div className="space-y-2">
+      <div className="space-y-3">
         <Link
           href={playlistId ? `/playlists/${playlistId}` : "/"}
-          className="text-xs font-medium text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
+          className={`${subtleActionButtonClass} mb-3`}
         >
           {playlistId ? "Back to playlist" : "Back to playlists"}
         </Link>
@@ -248,7 +288,7 @@ export default function SongDetailPage() {
             <button
               type="button"
               onClick={() => setNotesOpen((prev) => !prev)}
-              className="rounded border border-zinc-300 bg-white px-2 py-0.5 text-[11px] font-medium text-zinc-700 shadow-sm hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
+              className={subtleActionButtonClass}
             >
               {notesOpen ? "Hide notes" : hasNotes ? "Show notes" : "Add notes"}
             </button>
@@ -286,20 +326,37 @@ export default function SongDetailPage() {
         )}
       </div>
 
-      <section
-        ref={scrollContainerRef}
-        className="flex min-h-0 flex-1 w-full flex-col space-y-3 rounded-lg border border-black/5 bg-white/80 p-4 text-sm shadow-sm overflow-y-auto dark:border-white/10 dark:bg-black/60"
-      >
+      <section className="flex min-h-0 flex-1 w-full flex-col space-y-3 rounded-lg border border-black/5 bg-white/80 p-4 text-sm shadow-sm dark:border-white/10 dark:bg-black/60">
         <div className="flex flex-wrap items-center justify-between gap-3 text-[11px] text-zinc-600 dark:text-zinc-400">
           <button
             type="button"
             onClick={() => setControlsCollapsed((prev) => !prev)}
-            className="rounded border border-zinc-300 bg-white px-2 py-0.5 text-[11px] font-medium text-zinc-700 shadow-sm hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
+            className={subtleActionButtonClass}
           >
             {controlsCollapsed ? "Show header" : "Hide header"}
           </button>
 
           <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-1">
+              <span className="text-[10px] uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                Font
+              </span>
+              <button
+                type="button"
+                onClick={decreaseFontSize}
+                className="flex h-5 w-5 items-center justify-center rounded border border-zinc-300 bg-white text-[11px] text-zinc-700 shadow-sm hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
+              >
+                -
+              </button>
+              <button
+                type="button"
+                onClick={increaseFontSize}
+                className="flex h-5 w-5 items-center justify-center rounded border border-zinc-300 bg-white text-[11px] text-zinc-700 shadow-sm hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
+              >
+                +
+              </button>
+            </div>
+
             <label className="inline-flex items-center gap-2">
               <input
                 type="checkbox"
@@ -328,7 +385,10 @@ export default function SongDetailPage() {
           </div>
         </div>
 
-        <div className="pt-2 pb-4">
+        <div
+          ref={setScrollContainerRef}
+          className="flex-1 overflow-y-auto pt-2 pb-4"
+        >
           {isLoading ? (
             <p className="text-xs text-zinc-500 dark:text-zinc-500">
               Loading tab from Ultimate Guitar…
@@ -349,7 +409,10 @@ export default function SongDetailPage() {
               </a>
             </div>
           ) : rawTabText ? (
-            <pre className="font-mono text-xs whitespace-pre text-zinc-900 dark:text-zinc-100">
+            <pre
+              className="font-mono whitespace-pre text-zinc-900 dark:text-zinc-100"
+              style={{ fontSize: `${tabFontSize || 12}px`, lineHeight: 1.4 }}
+            >
               {rawTabText}
             </pre>
           ) : (

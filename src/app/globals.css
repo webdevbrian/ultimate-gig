@@ -93,6 +93,10 @@
   }
 }
 
+.ka-thead-row .ka-thead-cell:last-child .ka-thead-cell-resize {
+  display: none;
+}
+
 :root {
   --radius: 0.625rem;
   --background: oklch(1 0 0);
