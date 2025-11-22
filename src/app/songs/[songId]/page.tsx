@@ -13,7 +13,10 @@ export default function SongDetailPage() {
   const playlistId = searchParams.get("playlistId");
 
   const songId = params.songId as string;
-  const [songs] = useLocalStorage<Song[]>("ultimate-gig:songs", []);
+  const [songs, , songsHydrated] = useLocalStorage<Song[]>(
+    "ultimate-gig:songs",
+    [],
+  );
   const [tab, setTab] = useState<UgTabResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -40,8 +43,8 @@ export default function SongDetailPage() {
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
 
   const song = useMemo(
-    () => songs.find((s) => s.id === songId),
-    [songs, songId],
+    () => (songsHydrated ? songs.find((s) => s.id === songId) : undefined),
+    [songs, songId, songsHydrated],
   );
 
   const currentNotes = notesBySongId[songId] ?? "";
@@ -169,6 +172,22 @@ export default function SongDetailPage() {
       element.style.display = "";
     };
   }, [controlsCollapsed]);
+
+  if (!songsHydrated) {
+    return (
+      <div className="space-y-4">
+        <Link
+          href={playlistId ? `/playlists/${playlistId}` : "/"}
+          className="text-xs font-medium text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
+        >
+          Back
+        </Link>
+        <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-4 text-sm text-zinc-600 dark:border-white/10 dark:bg-zinc-900 dark:text-zinc-300">
+          Loading song…
+        </div>
+      </div>
+    );
+  }
 
   if (!song) {
     return (

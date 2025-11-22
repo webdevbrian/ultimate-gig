@@ -374,7 +374,7 @@ export default function Home() {
                 headCell: {
                   elementAttributes: () => ({
                     className:
-                      "px-4 py-2 bg-zinc-50 text-[11px] font-semibold uppercase tracking-wide text-zinc-500 border-b border-zinc-200 dark:bg-zinc-900 dark:text-zinc-400 dark:border-white/10",
+                      "px-4 py-2 text-left bg-zinc-50 text-[11px] font-semibold uppercase tracking-wide text-zinc-500 border-b border-zinc-200 dark:bg-zinc-900 dark:text-zinc-400 dark:border-white/10",
                   }),
                 },
                 cell: {

@@ -29,6 +29,10 @@ body {
   width: 100%;
 }
 
+.ka-thead-cell {
+  text-align: left;
+}
+
 /* ka-table header layout + resize handles */
 .ka-thead-cell-wrapper {
   display: flex;
