@@ -8,6 +8,7 @@ import { YoutubeIcon } from "@/components/icons/YoutubeIcon";
 
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import type { PlaylistItem, Song, UgTabResponse } from "@/lib/models";
+import { decodeHtmlEntities } from "@/lib/utils";
 
 export default function SongDetailPage() {
   const params = useParams<{ songId: string }>();
@@ -408,7 +409,7 @@ export default function SongDetailPage() {
                   href={`/songs/${previousPlaylistSong.song.id}${playlistQuery}`}
                   className={subtleActionButtonClass}
                 >
-                  {`Previous: ${previousPlaylistSong.song.artist} | ${previousPlaylistSong.song.title}`}
+                  {`Previous: ${decodeHtmlEntities(previousPlaylistSong.song.artist)} | ${decodeHtmlEntities(previousPlaylistSong.song.title)}`}
                 </Link>
               ) : null}
               {nextPlaylistSong ? (
@@ -416,7 +417,7 @@ export default function SongDetailPage() {
                   href={`/songs/${nextPlaylistSong.song.id}${playlistQuery}`}
                   className={subtleActionButtonClass}
                 >
-                  {`Next: ${nextPlaylistSong.song.artist} | ${nextPlaylistSong.song.title}`}
+                  {`Next: ${decodeHtmlEntities(nextPlaylistSong.song.artist)} | ${decodeHtmlEntities(nextPlaylistSong.song.title)}`}
                 </Link>
               ) : null}
             </div>
@@ -528,7 +529,7 @@ export default function SongDetailPage() {
         {!controlsCollapsed && (
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-semibold tracking-tight">{song.title}</h1>
+              <h1 className="text-2xl font-semibold tracking-tight">{decodeHtmlEntities(song.title)}</h1>
               <div className="flex items-center gap-2">
                 {song.spotifyTrackId ? (
                   <Link
@@ -554,7 +555,7 @@ export default function SongDetailPage() {
                 ) : null}
               </div>
             </div>
-            <p className="text-sm text-zinc-600 dark:text-zinc-400">{song.artist}</p>
+            <p className="text-sm text-zinc-600 dark:text-zinc-400">{decodeHtmlEntities(song.artist)}</p>
             {song.ugTabType ? (
               <p className="text-xs text-zinc-500 dark:text-zinc-500">
                 Ultimate Guitar · {song.ugTabType}
@@ -693,30 +694,6 @@ function formatWikiTabAsPlainText(content: string): string {
   return withoutChordTags.replace(/\r\n/g, "\n");
 }
 
-function decodeHtmlEntities(value: string): string {
-  if (!value) return value;
-
-  return (
-    value
-      // Numeric decimal entities, e.g. &#039; or &#8217;
-      .replace(/&#(\d+);/g, (_match, code) => {
-        const n = Number.parseInt(code, 10);
-        return Number.isNaN(n) ? _match : String.fromCharCode(n);
-      })
-      // Numeric hex entities, e.g. &#x2019;
-      .replace(/&#x([0-9a-fA-F]+);/g, (_match, hex) => {
-        const n = Number.parseInt(hex, 16);
-        return Number.isNaN(n) ? _match : String.fromCharCode(n);
-      })
-      // Common named entities we expect from UG content
-      .replace(/&quot;/g, '"')
-      .replace(/&apos;/g, "'")
-      .replace(/&nbsp;/g, " ")
-      .replace(/&amp;/g, "&")
-      .replace(/&lt;/g, "<")
-      .replace(/&gt;/g, ">")
-  );
-}
 
 type MediaLinkInfo =
   | { type: "spotify"; trackId: string; url: string }

@@ -10,6 +10,7 @@ import { useLocalStorage } from "@/hooks/useLocalStorage";
 import type { Playlist, PlaylistItem, Song } from "@/lib/models";
 import { SpotifyIcon } from "@/components/icons/SpotifyIcon";
 import { YoutubeIcon } from "@/components/icons/YoutubeIcon";
+import { decodeHtmlEntities } from "@/lib/utils";
 
 type TableStateSnapshot = Record<string, unknown>;
 
@@ -65,8 +66,8 @@ export default function PlaylistDetailPage() {
           ? {
               position: item.position,
               song,
-              title: song.title,
-              artist: song.artist,
+              title: decodeHtmlEntities(song.title),
+              artist: decodeHtmlEntities(song.artist),
               playCount: song.playCount || 0,
               lastPlayedAt: song.lastPlayedAt,
               id: `${song.id}-${item.position}`, // Unique row key
