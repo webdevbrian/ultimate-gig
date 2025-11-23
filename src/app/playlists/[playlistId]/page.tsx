@@ -119,10 +119,7 @@ export default function PlaylistDetailPage() {
 
   return (
     <div className="space-y-6">
-      <div className="space-y-2">
-        <Link href="/" className={subtleActionButtonClass}>
-          Back to playlists
-        </Link>
+      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
         <div className="space-y-1">
           <h1 className="text-2xl font-semibold tracking-tight">
             {playlist.name || "Playlist"}
@@ -137,6 +134,9 @@ export default function PlaylistDetailPage() {
             {new Date(playlist.importedAt).toLocaleString()}
           </p>
         </div>
+        <Link href="/" className={`${subtleActionButtonClass} self-start md:self-auto`}>
+          Back to playlists
+        </Link>
       </div>
 
       <section className="space-y-3">

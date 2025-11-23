@@ -398,35 +398,37 @@ export default function SongDetailPage() {
   return (
     <div className="flex flex-1 min-h-0 w-full flex-col space-y-6">
       <div className="space-y-3">
-        {playlistId ? (
-          <div className="mb-3 flex flex-wrap items-center gap-2">
-            <Link href={`/playlists/${playlistId}`} className={subtleActionButtonClass}>
-              Back to playlist
-            </Link>
-            <div className="ml-auto flex flex-wrap items-center gap-2">
-              {previousPlaylistSong ? (
-                <Link
-                  href={`/songs/${previousPlaylistSong.song.id}${playlistQuery}`}
-                  className={subtleActionButtonClass}
-                >
-                  {`Previous: ${decodeHtmlEntities(previousPlaylistSong.song.artist)} | ${decodeHtmlEntities(previousPlaylistSong.song.title)}`}
-                </Link>
-              ) : null}
-              {nextPlaylistSong ? (
-                <Link
-                  href={`/songs/${nextPlaylistSong.song.id}${playlistQuery}`}
-                  className={subtleActionButtonClass}
-                >
-                  {`Next: ${decodeHtmlEntities(nextPlaylistSong.song.artist)} | ${decodeHtmlEntities(nextPlaylistSong.song.title)}`}
-                </Link>
-              ) : null}
-            </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {previousPlaylistSong ? (
+              <Link
+                href={`/songs/${previousPlaylistSong.song.id}${playlistQuery}`}
+                className={subtleActionButtonClass}
+              >
+                {`Previous: ${decodeHtmlEntities(previousPlaylistSong.song.artist)} | ${decodeHtmlEntities(previousPlaylistSong.song.title)}`}
+              </Link>
+            ) : null}
+            {nextPlaylistSong ? (
+              <Link
+                href={`/songs/${nextPlaylistSong.song.id}${playlistQuery}`}
+                className={subtleActionButtonClass}
+              >
+                {`Next: ${decodeHtmlEntities(nextPlaylistSong.song.artist)} | ${decodeHtmlEntities(nextPlaylistSong.song.title)}`}
+              </Link>
+            ) : null}
           </div>
-        ) : (
-          <Link href="/" className={`${subtleActionButtonClass} mb-3`}>
-            Back to playlists
-          </Link>
-        )}
+          <div className="ml-auto">
+            {playlistId ? (
+              <Link href={`/playlists/${playlistId}`} className={subtleActionButtonClass}>
+                Back to playlist
+              </Link>
+            ) : (
+              <Link href="/" className={subtleActionButtonClass}>
+                Back to playlists
+              </Link>
+            )}
+          </div>
+        </div>
         {!controlsCollapsed && (
           <>
             <section className="space-y-1 rounded-md border border-dashed border-zinc-300 bg-white/70 p-2 text-[11px] text-zinc-700 shadow-sm dark:border-zinc-700 dark:bg-zinc-900/70 dark:text-zinc-200">

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -32,14 +33,22 @@ export default function RootLayout({
         <div className="min-h-screen bg-background text-foreground flex flex-col">
           <header className="border-b border-black/5 bg-white/70 px-4 py-3 text-sm font-medium backdrop-blur dark:border-white/10 dark:bg-black/70">
             <div className="mx-auto flex max-w-5xl items-center justify-between gap-4">
-              <div className="flex items-baseline gap-3">
+              <div className="flex items-center gap-3">
                 <div className="flex items-baseline gap-2">
                   <span className="text-base font-semibold tracking-tight">Ultimate Gig</span>
                   <span className="text-xs text-zinc-500 dark:text-zinc-400">
                     Playlist & tab manager for live sets
                   </span>
                 </div>
-                <ThemeToggle />
+                <div className="flex items-center gap-2">
+                  <Link
+                    href="/settings"
+                    className="inline-flex items-center justify-center rounded border border-zinc-300 bg-white px-2 py-0.5 text-[11px] font-medium text-zinc-700 shadow-sm transition hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                  >
+                    Settings
+                  </Link>
+                  <ThemeToggle />
+                </div>
               </div>
               {/* <span className="text-xs text-zinc-500 dark:text-zinc-400">
                 Local & offline-friendly
