@@ -590,71 +590,89 @@ export default function Home() {
             </div>
 
             {/* Play Activity Over Time */}
-            <div className="bg-white dark:bg-zinc-900 p-3 rounded-lg border border-zinc-200 dark:border-white/10">
+            <div className="rounded-lg border border-white/10 bg-gradient-to-b from-[#0f172a] to-[#020617] p-3 text-white">
               <h3 className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
                 Play Activity (Last 30 Days)
               </h3>
               {chartData.activityData.some(d => d.plays > 0) ? (
-                <div style={{ width: '100%', height: '180px' }}>
+                <div
+                  style={{
+                    width: '100%',
+                    height: '220px',
+                    borderRadius: '12px',
+                    padding: '12px 16px',
+                    background: 'linear-gradient(180deg, rgba(15,23,42,0.9) 0%, rgba(2,6,23,0.95) 100%)'
+                  }}
+                >
+                  <svg width="0" height="0" aria-hidden="true" focusable="false">
+                    <defs>
+                      <linearGradient id="activity-gradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#facc15" stopOpacity={0.7} />
+                        <stop offset="60%" stopColor="#ca8a04" stopOpacity={0.3} />
+                        <stop offset="100%" stopColor="#0f172a" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                  </svg>
                   <LineChart
                     dataset={chartData.activityData}
                     xAxis={[{
                       scaleType: 'point',
-                      dataKey: 'label'
+                      dataKey: 'label',
+                      tickLabelStyle: {
+                        fill: '#94a3b8',
+                        fontSize: 11
+                      }
                     }]}
                     yAxis={[{
-                      tickLabelStyle: { display: 'none' }
+                      tickNumber: 4,
+                      valueFormatter: (value: number) => value >= 1000 ? `${Math.round(value / 1000)}K` : `${value}`,
+                      tickLabelStyle: {
+                        fill: '#94a3b8',
+                        fontSize: 11
+                      }
                     }]}
                     series={[
                       {
                         dataKey: 'plays',
-                        color: '#10b981',
+                        color: '#facc15',
                         curve: 'linear',
+                        showMark: false,
+                        area: true,
+                        areaOpacity: 1,
+                        valueFormatter: (value) => `${value} plays`
                       },
                     ]}
-                    height={230}
-                    margin={{ left: 0, right: 10, top: 10, bottom: 40 }}
+                    height={220}
+                    margin={{ left: 20, right: 20, top: 10, bottom: 20 }}
+                    slotProps={{
+                      area: {
+                        style: { fill: 'url(#activity-gradient)' }
+                      }
+                    }}
                     sx={{
                       width: '100%',
-                      marginLeft: '-20px',
-                      '& .MuiChartsAxis-tickLabel': {
-                        fill: '#000000 !important',
-                        fontSize: '10px !important'
+                      marginLeft: '-10px',
+                      '& .MuiLineElement-root': {
+                        strokeWidth: 3,
+                        filter: 'drop-shadow(0px 0px 6px rgba(250, 204, 21, 0.4))'
                       },
                       '& .MuiChartsAxis-line': {
-                        stroke: '#000000 !important'
+                        stroke: '#1e293b !important'
                       },
                       '& .MuiChartsAxis-tick': {
-                        stroke: '#000000 !important'
+                        stroke: '#1e293b !important'
                       },
-                      '& line': {
-                        stroke: '#000000 !important'
+                      '& .MuiChartsGrid-line': {
+                        stroke: '#1f2937',
+                        strokeDasharray: '4 4'
                       },
-                      '& path': {
-                        stroke: '#000000 !important'
+                      '& .MuiChartsLegend-root': {
+                        color: '#eab308'
                       },
-                      '& text': {
-                        fill: '#000000 !important'
-                      },
-                      '.dark &': {
-                        '& .MuiChartsAxis-tickLabel': {
-                          fill: '#ffffff !important'
-                        },
-                        '& .MuiChartsAxis-line': {
-                          stroke: '#ffffff !important'
-                        },
-                        '& .MuiChartsAxis-tick': {
-                          stroke: '#ffffff !important'
-                        },
-                        '& line': {
-                          stroke: '#ffffff !important'
-                        },
-                        '& path': {
-                          stroke: '#ffffff !important'
-                        },
-                        '& text': {
-                          fill: '#ffffff !important'
-                        }
+                      '& .MuiChartsTooltip-paper': {
+                        backgroundColor: '#1e1b4b',
+                        color: '#fefce8',
+                        border: '1px solid #fde047'
                       }
                     }}
                   />
