@@ -390,106 +390,111 @@ export default function Home() {
                 Top Played Songs
               </h3>
               {chartData.topSongs.length > 0 ? (
-                <div style={{ position: 'relative', width: '100%', height: '180px' }}>
-                  <BarChart
-                    dataset={chartData.topSongs}
-                    xAxis={[{
-                      scaleType: 'linear',
-                      min: 0,
-                      max: Math.max(...chartData.topSongs.map(s => s.plays)) + 1,
-                      tickNumber: Math.max(...chartData.topSongs.map(s => s.plays)) + 2
-                    }]}
-                    yAxis={[{
-                      scaleType: 'band',
-                      dataKey: 'label',
-                      tickLabelStyle: { display: 'none' }
-                    }]}
-                    series={[{
-                      dataKey: 'plays',
-                      valueFormatter: (value) => `${value} plays`
-                    }]}
-                    layout="horizontal"
-                    height={120}
-                    margin={{ left: 0, right: 10, top: 10, bottom: 10 }}
-                    colors={chartData.topSongs.map(song => song.color)}
-                    sx={{
-                      width: '100%',
-                      marginLeft: '-20px',
-                      '& .MuiChartsLegend-root': {
-                        display: 'none !important'
-                      },
-                      '& .MuiChartsAxis-tickLabel': {
-                        fill: '#000000 !important',
-                        fontSize: '11px !important'
-                      },
-                      '& .MuiChartsAxis-line': {
-                        stroke: '#000000 !important'
-                      },
-                      '& .MuiChartsAxis-tick': {
-                        stroke: '#000000 !important'
-                      },
-                      '& line': {
-                        stroke: '#000000 !important'
-                      },
-                      '& path': {
-                        stroke: '#000000 !important'
-                      },
-                      '& text': {
-                        fill: '#000000 !important'
-                      },
-                      '.dark &': {
+                <div className="flex flex-col gap-3" style={{ width: '100%' }}>
+                  <div style={{ width: '100%', height: '180px' }}>
+                    <BarChart
+                      dataset={chartData.topSongs}
+                      xAxis={[{
+                        scaleType: 'linear',
+                        min: 0,
+                        max: Math.max(...chartData.topSongs.map(s => s.plays)) + 1,
+                        tickNumber: Math.max(...chartData.topSongs.map(s => s.plays)) + 2
+                      }]}
+                      yAxis={[{
+                        scaleType: 'band',
+                        dataKey: 'label',
+                        tickLabelStyle: { display: 'none' }
+                      }]}
+                      series={[{
+                        dataKey: 'plays',
+                        valueFormatter: (value) => `${value} plays`
+                      }]}
+                      layout="horizontal"
+                      height={120}
+                      margin={{ left: 0, right: 10, top: 10, bottom: 10 }}
+                      sx={{
+                        width: '100%',
+                        marginLeft: '-20px',
+                        '& .MuiChartsLegend-root': {
+                          display: 'none !important'
+                        },
                         '& .MuiChartsAxis-tickLabel': {
-                          fill: '#ffffff !important'
+                          fill: '#000000 !important',
+                          fontSize: '11px !important'
                         },
                         '& .MuiChartsAxis-line': {
-                          stroke: '#ffffff !important'
+                          stroke: '#000000 !important'
                         },
                         '& .MuiChartsAxis-tick': {
-                          stroke: '#ffffff !important'
+                          stroke: '#000000 !important'
                         },
                         '& line': {
-                          stroke: '#ffffff !important'
+                          stroke: '#000000 !important'
                         },
                         '& path': {
-                          stroke: '#ffffff !important'
+                          stroke: '#000000 !important'
                         },
                         '& text': {
-                          fill: '#ffffff !important'
-                        }
-                      },
-                      ...Object.fromEntries(
-                        chartData.topSongs.map((song, index) => [
-                          `& .MuiBarElement-series-auto-generated-id-0:nth-of-type(${index + 1})`,
-                          { fill: `${song.color} !important` }
-                        ])
-                      )
+                          fill: '#000000 !important'
+                        },
+                        '.dark &': {
+                          '& .MuiChartsAxis-tickLabel': {
+                            fill: '#ffffff !important'
+                          },
+                          '& .MuiChartsAxis-line': {
+                            stroke: '#ffffff !important'
+                          },
+                          '& .MuiChartsAxis-tick': {
+                            stroke: '#ffffff !important'
+                          },
+                          '& line': {
+                            stroke: '#ffffff !important'
+                          },
+                          '& path': {
+                            stroke: '#ffffff !important'
+                          },
+                          '& text': {
+                            fill: '#ffffff !important'
+                          }
+                        },
+                        ...Object.fromEntries(
+                          chartData.topSongs.map((song, index) => [
+                            `& .MuiBarElement-series-auto-generated-id-0:nth-of-type(${index + 1})`,
+                            { fill: `${song.color} !important` }
+                          ])
+                        )
+                      }}
+                    />
+                  </div>
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexWrap: 'wrap',
+                      justifyContent: 'center',
+                      gap: '8px',
+                      maxWidth: '100%',
+                      padding: '0 8px'
                     }}
-                  />
-                  <div style={{
-                    position: 'absolute',
-                    bottom: '10px',
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    display: 'flex',
-                    flexWrap: 'wrap',
-                    justifyContent: 'center',
-                    gap: '8px',
-                    maxWidth: '100%',
-                    padding: '0 8px'
-                  }}>
+                  >
                     {chartData.topSongs.map((song, index) => (
-                      <div key={song.id} style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                        fontSize: '11px'
-                      }} className="text-black dark:text-white">
-                        <div style={{
-                          width: '8px',
-                          height: '8px',
-                          backgroundColor: song.color,
-                          borderRadius: '2px'
-                        }} />
+                      <div
+                        key={song.id}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          fontSize: '11px'
+                        }}
+                        className="text-black dark:text-white"
+                      >
+                        <div
+                          style={{
+                            width: '8px',
+                            height: '8px',
+                            backgroundColor: song.color,
+                            borderRadius: '2px'
+                          }}
+                        />
                         <span>{song.label}</span>
                       </div>
                     ))}
@@ -508,64 +513,70 @@ export default function Home() {
                 Top Played Artists
               </h3>
               {chartData.topArtists.length > 0 ? (
-                <div style={{ position: 'relative', width: '100%', height: '240px' }}>
-                  <PieChart
-                    series={[
-                      {
-                        data: chartData.topArtists,
-                        highlightScope: { fade: 'global', highlight: 'item' },
-                        innerRadius: 35,
-                        outerRadius: 80,
-                      },
-                    ]}
-                    width={300}
-                    height={200}
-                    margin={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                    sx={{
-                      width: '100%',
-                      '& .MuiChartsLegend-root': {
-                        display: 'none !important'
-                      },
-                      '& .MuiChartsTooltip-paper': {
-                        backgroundColor: isDarkMode ? '#27272a' : '#ffffff',
-                        color: isDarkMode ? '#ffffff' : '#000000',
-                        border: `1px solid ${isDarkMode ? '#52525b' : '#d4d4d8'}`
-                      },
-                      '& text': {
-                        fill: '#000000 !important'
-                      },
-                      '.dark &': {
+                <div className="flex flex-col gap-3" style={{ width: '100%' }}>
+                  <div style={{ width: '100%', height: '240px' }}>
+                    <PieChart
+                      series={[
+                        {
+                          data: chartData.topArtists,
+                          highlightScope: { fade: 'global', highlight: 'item' },
+                          innerRadius: 35,
+                          outerRadius: 80,
+                        },
+                      ]}
+                      width={300}
+                      height={200}
+                      margin={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                      sx={{
+                        width: '100%',
+                        '& .MuiChartsLegend-root': {
+                          display: 'none !important'
+                        },
+                        '& .MuiChartsTooltip-paper': {
+                          backgroundColor: isDarkMode ? '#27272a' : '#ffffff',
+                          color: isDarkMode ? '#ffffff' : '#000000',
+                          border: `1px solid ${isDarkMode ? '#52525b' : '#d4d4d8'}`
+                        },
                         '& text': {
-                          fill: '#ffffff !important'
+                          fill: '#000000 !important'
+                        },
+                        '.dark &': {
+                          '& text': {
+                            fill: '#ffffff !important'
+                          }
                         }
-                      }
+                      }}
+                    />
+                  </div>
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexWrap: 'wrap',
+                      justifyContent: 'center',
+                      gap: '8px',
+                      maxWidth: '100%',
+                      padding: '0 8px'
                     }}
-                  />
-                  <div style={{
-                    position: 'absolute',
-                    bottom: '0px',
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    display: 'flex',
-                    flexWrap: 'wrap',
-                    justifyContent: 'center',
-                    gap: '8px',
-                    maxWidth: '100%',
-                    padding: '0 8px'
-                  }}>
+                  >
                     {chartData.topArtists.map((artist, index) => (
-                      <div key={artist.id} style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                        fontSize: '11px'
-                      }} className="text-black dark:text-white">
-                        <div style={{
-                          width: '8px',
-                          height: '8px',
-                          backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#84cc16', '#f97316', '#ec4899', '#6366f1'][index % 10],
-                          borderRadius: '2px'
-                        }} />
+                      <div
+                        key={artist.id}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          fontSize: '11px'
+                        }}
+                        className="text-black dark:text-white"
+                      >
+                        <div
+                          style={{
+                            width: '8px',
+                            height: '8px',
+                            backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#84cc16', '#f97316', '#ec4899', '#6366f1'][index % 10],
+                            borderRadius: '2px'
+                          }}
+                        />
                         <span>{artist.artist}</span>
                       </div>
                     ))}
