@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useMemo, useState, useEffect, useCallback } from "react";
 import { Table, useTable } from "ka-table";
 import { DataType, SortingMode, EditingMode } from "ka-table/enums";
 import { BarChart } from '@mui/x-charts/BarChart';
@@ -33,6 +34,7 @@ function adjustColor(hex: string, amount: number) {
 }
 
 export default function Home() {
+  const router = useRouter();
   const [playlists, setPlaylists] = useLocalStorage<Playlist[]>(
     "ultimate-gig:playlists",
     [],
@@ -115,7 +117,6 @@ export default function Home() {
     const songColors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#84cc16', '#f97316', '#ec4899', '#6366f1'];
     const topSongs = playedSongs
       .sort((a, b) => (b.playCount || 0) - (a.playCount || 0))
-      .slice(0, 10)
       .map((song, index) => ({
         id: song.id,
         title: decodeHtmlEntities(song.title),
@@ -177,6 +178,19 @@ export default function Home() {
       totalPlayedSongs: playedSongs.length,
     };
   }, [songs]);
+
+  const topSongsChartHeight = Math.max(150, chartData.topSongs.length * 26);
+
+  const handleSongBarClick = useCallback(
+    (_event: React.SyntheticEvent | null, params?: { dataIndex?: number | null }) => {
+      if (params?.dataIndex == null) return;
+      const song = chartData.topSongs[params.dataIndex];
+      if (song) {
+        router.push(`/songs/${song.id}`);
+      }
+    },
+    [chartData.topSongs, router],
+  );
 
   async function handleImportSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -405,7 +419,7 @@ export default function Home() {
               </h3>
               {chartData.topSongs.length > 0 ? (
                 <div className="flex flex-col gap-3" style={{ width: '100%' }}>
-                  <div style={{ width: '100%', height: '180px' }}>
+                  <div style={{ width: '100%', height: `${topSongsChartHeight}px` }}>
                     <svg width="0" height="0" aria-hidden="true" focusable="false">
                       <defs>
                         {chartData.topSongs.map((song, index) => {
@@ -439,8 +453,9 @@ export default function Home() {
                         valueFormatter: (value) => `${value} plays`
                       }]}
                       layout="horizontal"
-                      height={120}
+                      height={topSongsChartHeight - 60}
                       margin={{ left: 0, right: 10, top: 10, bottom: 10 }}
+                      onItemClick={handleSongBarClick}
                       sx={{
                         width: '100%',
                         marginLeft: '-20px',
