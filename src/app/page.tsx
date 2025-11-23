@@ -33,6 +33,9 @@ function adjustColor(hex: string, amount: number) {
   return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
 }
 
+const chartCardClass =
+  "rounded-lg border border-zinc-200 dark:border-white/10 bg-white dark:bg-gradient-to-b dark:from-[#0f172a] dark:to-[#020617] p-3";
+
 export default function Home() {
   const router = useRouter();
   const [playlists, setPlaylists] = useLocalStorage<Playlist[]>(
@@ -181,6 +184,19 @@ export default function Home() {
   }, [songs]);
 
   const topSongsChartHeight = Math.max(150, chartData.topSongs.length * 26);
+  const chartSectionTextClass = isDarkMode ? "text-white" : "text-black";
+  const activityPanelBackground = isDarkMode
+    ? "linear-gradient(180deg, rgba(15,23,42,0.9) 0%, rgba(2,6,23,0.95) 100%)"
+    : "#ffffff";
+  const activityAxisLabelColor = isDarkMode ? "#94a3b8" : "#111827";
+  const activityAxisLineColor = isDarkMode ? "#1e293b" : "#d4d4d8";
+  const activityGridColor = isDarkMode ? "#1f2937" : "#e5e7eb";
+  const activityLegendColor = isDarkMode ? "#eab308" : "#a16207";
+  const activityTooltipStyles = {
+    background: isDarkMode ? "#1e1b4b" : "#ffffff",
+    color: isDarkMode ? "#fefce8" : "#1f2937",
+    border: isDarkMode ? "#fde047" : "#facc15",
+  };
 
   const handleSongBarClick = useCallback(
     (_event: React.SyntheticEvent | null, params?: { dataIndex?: number | null }) => {
@@ -414,8 +430,8 @@ export default function Home() {
           {chartsVisible && (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             {/* Top Played Songs */}
-            <div className="bg-white dark:bg-zinc-900 p-3 rounded-lg border border-zinc-200 dark:border-white/10">
-              <h3 className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+            <div className={`${chartCardClass} ${chartSectionTextClass}`}>
+              <h3 className="text-sm font-medium text-black dark:text-white mb-2">
                 Top Played Songs (Top 10)
               </h3>
               {chartData.topSongs.length > 0 ? (
@@ -557,8 +573,8 @@ export default function Home() {
             </div>
 
             {/* Top Played Artists */}
-            <div className="bg-white dark:bg-zinc-900 p-3 rounded-lg border border-zinc-200 dark:border-white/10">
-              <h3 className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+            <div className={`${chartCardClass} ${chartSectionTextClass}`}>
+              <h3 className="text-sm font-medium text-black dark:text-white mb-2">
                 Top Played Artists (Top 10)
               </h3>
               {chartData.topArtists.length > 0 ? (
@@ -659,8 +675,8 @@ export default function Home() {
             </div>
 
             {/* Play Activity Over Time */}
-            <div className="rounded-lg border border-white/10 bg-gradient-to-b from-[#0f172a] to-[#020617] p-3 text-white">
-              <h3 className="text-sm font-medium text-white mb-2">
+            <div className={`${chartCardClass} ${chartSectionTextClass}`}>
+              <h3 className="text-sm font-medium text-black dark:text-white mb-2">
                 Play Activity (Last 30 Days)
               </h3>
               {chartData.activityData.some(d => d.plays > 0) ? (
@@ -670,7 +686,7 @@ export default function Home() {
                     height: '220px',
                     borderRadius: '12px',
                     padding: '12px 16px',
-                    background: 'linear-gradient(180deg, rgba(15,23,42,0.9) 0%, rgba(2,6,23,0.95) 100%)'
+                    background: activityPanelBackground
                   }}
                 >
                   <svg width="0" height="0" aria-hidden="true" focusable="false">
@@ -688,7 +704,7 @@ export default function Home() {
                       scaleType: 'point',
                       dataKey: 'label',
                       tickLabelStyle: {
-                        fill: '#94a3b8',
+                        fill: activityAxisLabelColor,
                         fontSize: 11
                       }
                     }]}
@@ -696,7 +712,7 @@ export default function Home() {
                       tickNumber: 4,
                       valueFormatter: (value: number) => value >= 1000 ? `${Math.round(value / 1000)}K` : `${value}`,
                       tickLabelStyle: {
-                        fill: '#94a3b8',
+                        fill: activityAxisLabelColor,
                         fontSize: 11
                       }
                     }]}
@@ -725,22 +741,22 @@ export default function Home() {
                         filter: 'drop-shadow(0px 0px 6px rgba(250, 204, 21, 0.4))'
                       },
                       '& .MuiChartsAxis-line': {
-                        stroke: '#1e293b !important'
+                        stroke: `${activityAxisLineColor} !important`
                       },
                       '& .MuiChartsAxis-tick': {
-                        stroke: '#1e293b !important'
+                        stroke: `${activityAxisLineColor} !important`
                       },
                       '& .MuiChartsGrid-line': {
-                        stroke: '#1f2937',
+                        stroke: activityGridColor,
                         strokeDasharray: '4 4'
                       },
                       '& .MuiChartsLegend-root': {
-                        color: '#eab308'
+                        color: activityLegendColor
                       },
                       '& .MuiChartsTooltip-paper': {
-                        backgroundColor: '#1e1b4b',
-                        color: '#fefce8',
-                        border: '1px solid #fde047'
+                        backgroundColor: activityTooltipStyles.background,
+                        color: activityTooltipStyles.color,
+                        border: `1px solid ${activityTooltipStyles.border}`
                       }
                     }}
                   />
