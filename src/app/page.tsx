@@ -18,6 +18,20 @@ import type {
 
 type SortKey = "importedAt" | "name";
 
+function adjustColor(hex: string, amount: number) {
+  let color = hex.replace('#', '');
+  if (color.length === 3) {
+    color = color.split('').map((c) => c + c).join('');
+  }
+  const num = parseInt(color, 16);
+  if (Number.isNaN(num)) return hex;
+  const clamp = (value: number) => Math.min(255, Math.max(0, value));
+  const r = clamp((num >> 16) + amount);
+  const g = clamp(((num >> 8) & 0x00ff) + amount);
+  const b = clamp((num & 0x0000ff) + amount);
+  return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
+}
+
 export default function Home() {
   const [playlists, setPlaylists] = useLocalStorage<Playlist[]>(
     "ultimate-gig:playlists",
@@ -392,6 +406,21 @@ export default function Home() {
               {chartData.topSongs.length > 0 ? (
                 <div className="flex flex-col gap-3" style={{ width: '100%' }}>
                   <div style={{ width: '100%', height: '180px' }}>
+                    <svg width="0" height="0" aria-hidden="true" focusable="false">
+                      <defs>
+                        {chartData.topSongs.map((song, index) => {
+                          const start = adjustColor(song.color, 35);
+                          const end = adjustColor(song.color, -15);
+                          return (
+                            <linearGradient id={`top-song-gradient-${index}`} key={song.id} x1="0" y1="0" x2="1" y2="0">
+                              <stop offset="0%" stopColor={start} stopOpacity={0.95} />
+                              <stop offset="70%" stopColor={song.color} stopOpacity={1} />
+                              <stop offset="100%" stopColor={end} stopOpacity={1} />
+                            </linearGradient>
+                          );
+                        })}
+                      </defs>
+                    </svg>
                     <BarChart
                       dataset={chartData.topSongs}
                       xAxis={[{
@@ -417,6 +446,9 @@ export default function Home() {
                         marginLeft: '-20px',
                         '& .MuiChartsLegend-root': {
                           display: 'none !important'
+                        },
+                        '& .MuiBarElement-root': {
+                          filter: 'drop-shadow(0px 1px 6px rgba(250, 204, 21, 0.35))'
                         },
                         '& .MuiChartsAxis-tickLabel': {
                           fill: '#000000 !important',
@@ -460,7 +492,7 @@ export default function Home() {
                         ...Object.fromEntries(
                           chartData.topSongs.map((song, index) => [
                             `& .MuiBarElement-series-auto-generated-id-0:nth-of-type(${index + 1})`,
-                            { fill: `${song.color} !important` }
+                            { fill: `url(#top-song-gradient-${index}) !important` }
                           ])
                         )
                       }}
@@ -489,10 +521,11 @@ export default function Home() {
                       >
                         <div
                           style={{
-                            width: '8px',
-                            height: '8px',
-                            backgroundColor: song.color,
-                            borderRadius: '2px'
+                            width: '10px',
+                            height: '10px',
+                            borderRadius: '3px',
+                            backgroundImage: `linear-gradient(90deg, ${adjustColor(song.color, 35)} 0%, ${song.color} 60%, ${adjustColor(song.color, -15)} 100%)`,
+                            boxShadow: `0 0 6px ${song.color}66`
                           }}
                         />
                         <span>{song.label}</span>
@@ -515,10 +548,29 @@ export default function Home() {
               {chartData.topArtists.length > 0 ? (
                 <div className="flex flex-col gap-3" style={{ width: '100%' }}>
                   <div style={{ width: '100%', height: '240px' }}>
+                    <svg width="0" height="0" aria-hidden="true" focusable="false">
+                      <defs>
+                        {chartData.topArtists.map((artist, index) => {
+                          const base = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#84cc16', '#f97316', '#ec4899', '#6366f1'][index % 10];
+                          const start = adjustColor(base, 35);
+                          const end = adjustColor(base, -20);
+                          return (
+                            <linearGradient id={`top-artist-gradient-${index}`} key={artist.id} x1="0" y1="0" x2="1" y2="1">
+                              <stop offset="0%" stopColor={start} />
+                              <stop offset="70%" stopColor={base} />
+                              <stop offset="100%" stopColor={end} />
+                            </linearGradient>
+                          );
+                        })}
+                      </defs>
+                    </svg>
                     <PieChart
                       series={[
                         {
-                          data: chartData.topArtists,
+                          data: chartData.topArtists.map((artist, index) => ({
+                            ...artist,
+                            color: `url(#top-artist-gradient-${index})`
+                          })),
                           highlightScope: { fade: 'global', highlight: 'item' },
                           innerRadius: 35,
                           outerRadius: 80,
@@ -571,10 +623,11 @@ export default function Home() {
                       >
                         <div
                           style={{
-                            width: '8px',
-                            height: '8px',
-                            backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#84cc16', '#f97316', '#ec4899', '#6366f1'][index % 10],
-                            borderRadius: '2px'
+                            width: '10px',
+                            height: '10px',
+                            borderRadius: '3px',
+                            backgroundImage: `linear-gradient(90deg, ${adjustColor(['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#84cc16', '#f97316', '#ec4899', '#6366f1'][index % 10], 35)} 0%, ${['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#84cc16', '#f97316', '#ec4899', '#6366f1'][index % 10]} 60%, ${adjustColor(['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#84cc16', '#f97316', '#ec4899', '#6366f1'][index % 10], -20)} 100%)`,
+                            boxShadow: `0 0 6px ${['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#84cc16', '#f97316', '#ec4899', '#6366f1'][index % 10]}66`
                           }}
                         />
                         <span>{artist.artist}</span>
@@ -591,7 +644,7 @@ export default function Home() {
 
             {/* Play Activity Over Time */}
             <div className="rounded-lg border border-white/10 bg-gradient-to-b from-[#0f172a] to-[#020617] p-3 text-white">
-              <h3 className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+              <h3 className="text-sm font-medium text-white mb-2">
                 Play Activity (Last 30 Days)
               </h3>
               {chartData.activityData.some(d => d.plays > 0) ? (
@@ -638,7 +691,6 @@ export default function Home() {
                         curve: 'linear',
                         showMark: false,
                         area: true,
-                        areaOpacity: 1,
                         valueFormatter: (value) => `${value} plays`
                       },
                     ]}
