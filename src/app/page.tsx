@@ -117,6 +117,7 @@ export default function Home() {
     const songColors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#84cc16', '#f97316', '#ec4899', '#6366f1'];
     const topSongs = playedSongs
       .sort((a, b) => (b.playCount || 0) - (a.playCount || 0))
+      .slice(0, 10)
       .map((song, index) => ({
         id: song.id,
         title: decodeHtmlEntities(song.title),
@@ -396,7 +397,7 @@ export default function Home() {
         <section className="space-y-4">
           <div className="flex items-center justify-between">
             <div className="space-y-1">
-              <h2 className="text-xl font-semibold tracking-tight">Practice Overview</h2>
+              <h2 className="text-xl font-semibold tracking-tight">Performing Overview</h2>
               <p className="text-sm text-zinc-600 dark:text-zinc-400">
                 {chartData.totalPlays} total plays across {chartData.totalPlayedSongs} songs
               </p>
@@ -415,7 +416,7 @@ export default function Home() {
             {/* Top Played Songs */}
             <div className="bg-white dark:bg-zinc-900 p-3 rounded-lg border border-zinc-200 dark:border-white/10">
               <h3 className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                Top Played Songs
+                Top Played Songs (Top 10)
               </h3>
               {chartData.topSongs.length > 0 ? (
                 <div className="flex flex-col gap-3" style={{ width: '100%' }}>
@@ -558,7 +559,7 @@ export default function Home() {
             {/* Top Played Artists */}
             <div className="bg-white dark:bg-zinc-900 p-3 rounded-lg border border-zinc-200 dark:border-white/10">
               <h3 className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                Top Played Artists
+                Top Played Artists (Top 10)
               </h3>
               {chartData.topArtists.length > 0 ? (
                 <div className="flex flex-col gap-3" style={{ width: '100%' }}>
