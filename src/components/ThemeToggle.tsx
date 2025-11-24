@@ -29,16 +29,20 @@ function applyTheme(mode: ThemeMode) {
 }
 
 export function ThemeToggle() {
-  const [mode, setMode] = useState<ThemeMode>(() => {
-    if (typeof window === "undefined") return "system";
+  const [mode, setMode] = useState<ThemeMode>("system");
+  const [hasHydrated, setHasHydrated] = useState(false);
+
+  // Load from localStorage after mount to avoid hydration mismatch
+  useEffect(() => {
+    if (typeof window === "undefined") return;
     try {
       const stored = window.localStorage.getItem(STORAGE_KEY);
       if (stored === "light" || stored === "dark" || stored === "system") {
-        return stored;
+        setMode(stored);
       }
     } catch {}
-    return "system";
-  });
+    setHasHydrated(true);
+  }, []);
 
   // Keep DOM theme in sync with the current mode and respond to system
   // theme changes when in "system" mode.

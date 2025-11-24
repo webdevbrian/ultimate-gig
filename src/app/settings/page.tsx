@@ -50,27 +50,30 @@ export default function SettingsPage() {
   const handleClearSongData = () => {
     if (typeof window === "undefined") return;
     const confirmed = window.confirm(
-      "This will remove songs, playlist items, notes, and playback metrics but keep imported playlists. Continue?",
+      "This will reset play counts, last played dates, and playback tracking for all songs. Your playlists and songs will remain. Continue?",
     );
     if (!confirmed) return;
 
     try {
-      const songKeyPrefixes = [
-        "ultimate-gig:songs",
-        "ultimate-gig:playlist-items",
-        "ultimate-gig:tab-notes",
-        "ultimate-gig:ui:tab-scroll-speed",
-        "ultimate-gig:ui:tab-font-size",
-        "ultimate-gig:ui:tab-header-collapsed",
-        "ultimate-gig:ui:tab-notes-open",
-        "ultimate-gig:ui:playlist-songs-table",
-        "ultimate-gig:ui:can-mark-played-",
-      ];
-      removeKeys((key) => songKeyPrefixes.some((prefix) => key.startsWith(prefix)));
+      // Reset playCount and lastPlayedAt on all songs instead of removing them
+      const songsKey = "ultimate-gig:songs";
+      const songsJson = window.localStorage.getItem(songsKey);
+      if (songsJson) {
+        const songs = JSON.parse(songsJson);
+        const resetSongs = songs.map((song: Record<string, unknown>) => {
+          const { playCount, lastPlayedAt, ...rest } = song;
+          return rest;
+        });
+        window.localStorage.setItem(songsKey, JSON.stringify(resetSongs));
+      }
+
+      // Clear UI state for marking songs as played (so they can be marked again)
+      removeKeys((key) => key.startsWith("ultimate-gig:ui:can-mark-played-"));
+
       setFeedback({
         scope: "songs",
         state: "success",
-        message: "Song data cleared. Your imported playlists remain on this device.",
+        message: "Song history reset. Play counts and last played dates have been cleared.",
       });
     } catch (error) {
       console.error("Failed to clear song data", error);
@@ -135,9 +138,9 @@ export default function SettingsPage() {
 
           <div className="flex flex-col gap-3 rounded-md border border-zinc-200 bg-zinc-50 p-3 text-zinc-900 shadow-sm dark:border-white/10 dark:bg-zinc-900/60 dark:text-zinc-100">
             <div className="text-sm">
-              <p className="font-medium">Clear song history only</p>
+              <p className="font-medium">Reset song history</p>
               <p className="text-xs opacity-80">
-                Removes tracked plays, playlist items, notes, and tab settings but keeps imported playlists.
+                Resets play counts and last played dates. Playlists and songs remain intact.
               </p>
             </div>
             <button
@@ -145,7 +148,7 @@ export default function SettingsPage() {
               onClick={handleClearSongData}
               className="inline-flex w-full items-center justify-center rounded-md border border-yellow-400/60 bg-yellow-500/90 px-3 py-2 text-sm font-medium text-yellow-950 shadow-sm transition hover:bg-yellow-500 dark:border-yellow-400/40 dark:bg-yellow-500/70"
             >
-              Clear song data
+              Reset history
             </button>
             {feedback?.scope === "songs" && (
               <p

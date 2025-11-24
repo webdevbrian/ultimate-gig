@@ -57,10 +57,7 @@ export default function SongDetailPage() {
     | { type: "error"; message: string }
     | null
   >(null);
-  const [canMarkAsPlayed, setCanMarkAsPlayed] = useLocalStorage<boolean>(
-    `ultimate-gig:ui:can-mark-played-${songId}`,
-    true,
-  );
+  const [justMarkedAsPlayed, setJustMarkedAsPlayed] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const subtleActionButtonClass =
     "inline-flex items-center justify-center rounded border border-zinc-300 bg-white px-2 py-0.5 text-[11px] font-medium text-zinc-700 shadow-sm transition hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800";
@@ -188,10 +185,10 @@ export default function SongDetailPage() {
     setMediaStatus(null);
   }, [song?.spotifyTrackId, song?.youtubeUrl, song]);
 
-  // Reset ability to mark as played when song changes (fresh load)
+  // Reset the "just marked as played" flag when song changes
   useEffect(() => {
-    setCanMarkAsPlayed(true);
-  }, [songId, setCanMarkAsPlayed]);
+    setJustMarkedAsPlayed(false);
+  }, [songId]);
 
   const handleSaveMediaLink = (overrideValue?: string) => {
     if (!song) return;
@@ -240,22 +237,54 @@ export default function SongDetailPage() {
     handleSaveMediaLink("");
   };
 
-  const handleMarkAsPlayed = () => {
-    if (!song || !canMarkAsPlayed) return;
+  const handleMarkAsPlayed = (event: React.MouseEvent<HTMLButtonElement>) => {
+    if (!song) return;
 
-    setSongs((current) =>
-      current.map((entry) =>
-        entry.id === song.id
-          ? {
-              ...entry,
-              playCount: (entry.playCount || 0) + 1,
-              lastPlayedAt: new Date().toISOString(),
-            }
-          : entry,
-      ),
-    );
+    // Only allow unmarking if it was marked in this session
+    if (justMarkedAsPlayed) {
+      // Unmark - reset count and timestamp
+      setSongs((current) =>
+        current.map((entry) =>
+          entry.id === song.id
+            ? {
+                ...entry,
+                playCount: Math.max(0, (entry.playCount || 0) - 1),
+                lastPlayedAt: (entry.playCount || 0) > 1 ? entry.lastPlayedAt : undefined,
+              }
+            : entry,
+        ),
+      );
+      setJustMarkedAsPlayed(false);
+    } else {
+      // Mark as played - increment count and set timestamp
+      setSongs((current) =>
+        current.map((entry) =>
+          entry.id === song.id
+            ? {
+                ...entry,
+                playCount: (entry.playCount || 0) + 1,
+                lastPlayedAt: new Date().toISOString(),
+              }
+            : entry,
+        ),
+      );
+      setJustMarkedAsPlayed(true);
 
-    setCanMarkAsPlayed(false);
+      // Capture button position before async import
+      const rect = event.currentTarget.getBoundingClientRect();
+      const x = (rect.left + rect.width / 2) / window.innerWidth;
+      const y = (rect.top + rect.height / 2) / window.innerHeight;
+
+      // Trigger confetti from the button position
+      import('canvas-confetti').then((confetti) => {
+        confetti.default({
+          particleCount: 50,
+          spread: 60,
+          origin: { x, y },
+          colors: ['#10b981', '#34d399', '#6ee7b7'],
+        });
+      });
+    }
   };
 
   // Simple vertical auto-scroll for the tab text. Speed is a scalar
@@ -630,14 +659,13 @@ export default function SongDetailPage() {
             <button
               type="button"
               onClick={handleMarkAsPlayed}
-              disabled={!canMarkAsPlayed}
-              className={`${subtleActionButtonClass} ${
-                !canMarkAsPlayed
-                  ? "opacity-50 cursor-not-allowed"
-                  : "hover:bg-emerald-50 hover:border-emerald-300 hover:text-emerald-700 dark:hover:bg-emerald-950 dark:hover:border-emerald-800 dark:hover:text-emerald-300"
+              className={`inline-flex items-center justify-center rounded border px-2 py-0.5 text-[11px] font-medium shadow-sm transition ${
+                justMarkedAsPlayed
+                  ? "border-zinc-300 bg-zinc-100 text-zinc-700 hover:bg-zinc-200 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
+                  : "border-emerald-500 bg-white text-emerald-600 hover:bg-emerald-50 dark:border-emerald-600 dark:bg-zinc-900 dark:text-emerald-400 dark:hover:bg-emerald-950"
               }`}
             >
-              Mark as played
+              {justMarkedAsPlayed ? "Unmark played" : "Mark as played"}
             </button>
           </div>
         </div>

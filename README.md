@@ -16,22 +16,41 @@ The app is designed to be:
   - Paste a UG playlist URL and import its songs.
   - Playlists, songs, and playlist items are stored locally so you can work offline.
 
-- **Playlists overview** (`/`)
+- **Dashboard** (`/`)
   - Table of imported playlists with sortable, resizable, and re-orderable columns.
-  - Dark-mode aware styling integrated with the app theme.
+  - Search playlists by name.
   - Actions to resync or remove playlists from the device.
 
 - **Playlist detail / setlist view** (`/playlists/[playlistId]`)
   - Shows all songs in a playlist with search by title or artist.
   - Column reordering + resizing with layout persisted to `localStorage`.
+  - Play count and last played date columns for tracking progress.
+  - Quick links to Spotify and YouTube for each song (when available).
   - Links into the song/tab view for each track.
+  - **Per-playlist charts & statistics**:
+    - **Top 10 Played Songs** – horizontal bar chart with custom legends (click to navigate to song).
+    - **Top 10 Played Artists** – donut chart with aggregated play counts from playlist songs.
+    - **30-Day Play Activity** – area chart with gradient fill tracking daily plays.
+    - Toggle to hide/show charts for a cleaner view.
 
 - **Song / tab view** (`/songs/[songId]`)
   - Renders the Ultimate Guitar tab content as plain text.
-  - Optional auto-scroll with configurable speed.
+  - **Mark as played** button to track play count and last played timestamp.
+  - Adjustable font size (+/- controls, persisted per device).
+  - Optional auto-scroll with configurable speed (0.1x – 3.0x).
   - Per-song notes panel (for cues, capo info, reminders, etc.).
-  - Ability to collapse the app header for a focused performance view.
+  - Displays tuning information and tab type (chords, tab, pro).
+  - Ability to collapse the header for a focused performance view.
   - Tab container height is constrained to the viewport with its own scrollbar.
+
+- **Streaming links**
+  - Add Spotify track links (URL, URI, or track ID) to any song.
+  - Add YouTube video links (supports youtube.com, youtu.be, Shorts).
+  - Quick-access icons in song view and playlist table rows.
+
+- **Settings** (`/settings`)
+  - **Clear all data** – removes playlists, songs, stats, and preferences.
+  - **Reset song history** – clears play counts and last played dates while keeping playlists and songs intact.
 
 - **Theme support**
   - Light / dark / system theme toggle.
@@ -45,6 +64,7 @@ The app is designed to be:
 - **Framework**: Next.js (App Router, TypeScript)
 - **Styling**: Tailwind CSS + CSS variables for theming
 - **Tables**: [ka-table](https://ka-table.com/) for playlists and songs
+- **Charts**: [MUI X Charts](https://mui.com/x/react-charts/) for dashboard visualizations
 - **State persistence**: Custom `useLocalStorage` React hook
 
 The app is intentionally local-first: there is no external database. All user data (playlists, songs, notes, layout preferences) is stored in the browser.

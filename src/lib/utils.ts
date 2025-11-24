@@ -27,5 +27,22 @@ export function decodeHtmlEntities(value: string): string {
       .replace(/&amp;/g, "&")
       .replace(/&lt;/g, "<")
       .replace(/&gt;/g, ">")
+      // Quotation marks and apostrophes
+      .replace(/&rsquo;/g, "'")
+      .replace(/&lsquo;/g, "'")
+      .replace(/&rdquo;/g, '"')
+      .replace(/&ldquo;/g, '"')
+      // Dashes
+      .replace(/&ndash;/g, "–")
+      .replace(/&mdash;/g, "—")
+      // Other common symbols
+      .replace(/&hellip;/g, "…")
+      .replace(/&trade;/g, "™")
+      .replace(/&copy;/g, "©")
+      .replace(/&reg;/g, "®")
+      .replace(/&deg;/g, "°")
+      .replace(/&times;/g, "×")
+      .replace(/&divide;/g, "÷")
+      .replace(/&plusmn;/g, "±")
   );
 }
