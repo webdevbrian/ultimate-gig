@@ -41,6 +41,19 @@ function adjustColor(hex: string, amount: number) {
 const chartCardClass =
   "rounded-lg border border-zinc-200 dark:border-white/10 bg-white dark:bg-gradient-to-b dark:from-[#0f172a] dark:to-[#020617] p-3";
 
+const artistBaseColors = [
+  "#3b82f6",
+  "#10b981",
+  "#f59e0b",
+  "#ef4444",
+  "#8b5cf6",
+  "#06b6d4",
+  "#84cc16",
+  "#f97316",
+  "#ec4899",
+  "#6366f1",
+];
+
 type ChartSongDatum = {
   id: string;
   title: string;
@@ -49,6 +62,61 @@ type ChartSongDatum = {
   label: string;
   color: string;
 };
+
+type ChartArtistDatum = {
+  id: string;
+  artist: string;
+  plays: number;
+  label: string;
+  value: number;
+  baseColor: string;
+  gradientId: string;
+};
+
+type ActivityDatum = {
+  date: string;
+  plays: number;
+  label: string;
+};
+
+function renderGradientTooltipCard(
+  baseColor: string,
+  header: string,
+  subheader: string,
+  value: string,
+  isDarkMode: boolean,
+) {
+  const gradientStart = adjustColor(baseColor, 30);
+  const gradientEnd = adjustColor(baseColor, -20);
+  const primaryTextColor = isDarkMode ? "#050816" : "#020617";
+  const secondaryTextColor = isDarkMode ? "rgba(5, 8, 22, 0.7)" : "rgba(2, 6, 23, 0.65)";
+
+  return (
+    <div
+      style={{
+        background: `linear-gradient(90deg, ${gradientStart} 0%, ${baseColor} 65%, ${gradientEnd} 100%)`,
+        color: primaryTextColor,
+        padding: "10px 14px",
+        borderRadius: "12px",
+        minWidth: "180px",
+        boxShadow: `0 8px 20px ${baseColor}45`,
+        border: isDarkMode
+          ? "1px solid rgba(255, 255, 255, 0.25)"
+          : "1px solid rgba(2, 6, 23, 0.08)",
+      }}
+    >
+      <div style={{ fontSize: "11px", fontWeight: 600, letterSpacing: "0.04em", textTransform: "uppercase" }}>
+        {header}
+      </div>
+      <div style={{ fontSize: "13px", fontWeight: 600, marginTop: "2px", color: secondaryTextColor }}>
+        {subheader}
+      </div>
+      <div style={{ fontSize: "24px", fontWeight: 700, lineHeight: "28px", marginTop: "10px" }}>
+        {value}
+      </div>
+    </div>
+  );
+}
 
 export default function Home() {
   const router = useRouter();
@@ -151,16 +219,21 @@ export default function Home() {
       return acc;
     }, {} as Record<string, number>);
 
-    const topArtists = Object.entries(artistPlays)
+    const topArtists: ChartArtistDatum[] = Object.entries(artistPlays)
       .sort(([, a], [, b]) => b - a)
       .slice(0, 10)
-      .map(([artist, plays]) => ({
-        artist,
-        plays,
-        id: artist,
-        label: artist,
-        value: plays,
-      }));
+      .map(([artist, plays], index) => {
+        const baseColor = artistBaseColors[index % artistBaseColors.length];
+        return {
+          artist,
+          plays,
+          id: artist,
+          label: artist,
+          value: plays,
+          baseColor,
+          gradientId: `top-artist-gradient-${index}`,
+        };
+      });
 
     // Play activity over time (last 30 days)
     const thirtyDaysAgo = new Date();
@@ -176,7 +249,7 @@ export default function Home() {
       }, {} as Record<string, number>);
 
     // Fill in missing dates with 0
-    const activityData = [];
+    const activityData: ActivityDatum[] = [];
     for (let i = 29; i >= 0; i--) {
       const date = new Date();
       date.setDate(date.getDate() - i);
@@ -206,62 +279,78 @@ export default function Home() {
   const activityAxisLineColor = isDarkMode ? "#1e293b" : "#d4d4d8";
   const activityGridColor = isDarkMode ? "#1f2937" : "#e5e7eb";
   const activityLegendColor = isDarkMode ? "#eab308" : "#a16207";
-  const activityTooltipStyles = {
-    background: isDarkMode ? "#1e1b4b" : "#ffffff",
-    color: isDarkMode ? "#fefce8" : "#1f2937",
-    border: isDarkMode ? "#fde047" : "#facc15",
-  };
 
   const TopSongsTooltip = useMemo(() => {
     const Component = (tooltipProps: ChartsTooltipProps) => {
       const tooltipItem = useItemTooltip<'bar'>();
-
-      let content: React.ReactNode = null;
       const dataIndex = tooltipItem?.identifier?.dataIndex;
-      if (dataIndex != null) {
-        const song = chartData.topSongs[dataIndex];
-        if (song) {
-          const gradientStart = adjustColor(song.color, 30);
-          const gradientEnd = adjustColor(song.color, -20);
-          const tooltipBackground = `linear-gradient(90deg, ${gradientStart} 0%, ${song.color} 65%, ${gradientEnd} 100%)`;
-          const primaryTextColor = isDarkMode ? "#050816" : "#020617";
-          const secondaryTextColor = isDarkMode ? "rgba(5, 8, 22, 0.7)" : "rgba(2, 6, 23, 0.65)";
-          const playsValue = tooltipItem?.formattedValue ?? `${song.plays} plays`;
+      const song = dataIndex != null ? chartData.topSongs[dataIndex] : undefined;
+      const playsValue = tooltipItem?.formattedValue ?? (song ? `${song.plays} plays` : "");
 
-          content = (
-            <div
-              style={{
-                background: tooltipBackground,
-                color: primaryTextColor,
-                padding: "10px 14px",
-                borderRadius: "12px",
-                minWidth: "180px",
-                boxShadow: `0 8px 20px ${song.color}45`,
-                border: isDarkMode
-                  ? "1px solid rgba(255, 255, 255, 0.25)"
-                  : "1px solid rgba(2, 6, 23, 0.08)",
-              }}
-            >
-              <div style={{ fontSize: "11px", fontWeight: 600, letterSpacing: "0.04em", textTransform: "uppercase" }}>
-                {song.artist}
-              </div>
-              <div style={{ fontSize: "13px", fontWeight: 600, marginTop: "2px", color: secondaryTextColor }}>
-                {song.title}
-              </div>
-              <div style={{ fontSize: "24px", fontWeight: 700, lineHeight: "28px", marginTop: "10px" }}>
-                {playsValue}
-              </div>
-            </div>
-          );
-        }
-      }
-
-      return <ChartsTooltipContainer {...tooltipProps}>{content}</ChartsTooltipContainer>;
+      return (
+        <ChartsTooltipContainer {...tooltipProps}>
+          {song
+            ? renderGradientTooltipCard(song.color, song.artist, song.title, playsValue, isDarkMode)
+            : null}
+        </ChartsTooltipContainer>
+      );
     };
 
     Component.displayName = "TopSongsTooltip";
     return Component;
   }, [chartData.topSongs, isDarkMode]);
+
+  const TopArtistsTooltip = useMemo(() => {
+    const Component = (tooltipProps: ChartsTooltipProps) => {
+      const tooltipItem = useItemTooltip<'pie'>();
+      const dataIndex = tooltipItem?.identifier?.dataIndex;
+      const artist = dataIndex != null ? chartData.topArtists[dataIndex] : undefined;
+      const playsValue = tooltipItem?.formattedValue ?? (artist ? `${artist.plays} plays` : "");
+
+      return (
+        <ChartsTooltipContainer {...tooltipProps}>
+          {artist
+            ? renderGradientTooltipCard(
+                artist.baseColor,
+                artist.artist,
+                "Total plays",
+                playsValue,
+                isDarkMode,
+              )
+            : null}
+        </ChartsTooltipContainer>
+      );
+    };
+
+    Component.displayName = "TopArtistsTooltip";
+    return Component;
+  }, [chartData.topArtists, isDarkMode]);
+
+  const ActivityTooltip = useMemo(() => {
+    const Component = (tooltipProps: ChartsTooltipProps) => {
+      const tooltipItem = useItemTooltip<'line'>();
+      const dataIndex = tooltipItem?.identifier?.dataIndex;
+      const activityPoint = dataIndex != null ? chartData.activityData[dataIndex] : undefined;
+      const playsValue = tooltipItem?.formattedValue ?? (activityPoint ? `${activityPoint.plays} plays` : "");
+
+      return (
+        <ChartsTooltipContainer {...tooltipProps}>
+          {activityPoint
+            ? renderGradientTooltipCard(
+                "#facc15",
+                activityPoint.label,
+                "Daily plays",
+                playsValue,
+                isDarkMode,
+              )
+            : null}
+        </ChartsTooltipContainer>
+      );
+    };
+
+    Component.displayName = "ActivityTooltip";
+    return Component;
+  }, [chartData.activityData, isDarkMode]);
 
   const handleSongBarClick = useCallback(
     (_event: React.SyntheticEvent | null, params?: { dataIndex?: number | null }) => {
@@ -649,14 +738,13 @@ export default function Home() {
                   <div style={{ width: '100%', height: '240px' }}>
                     <svg width="0" height="0" aria-hidden="true" focusable="false">
                       <defs>
-                        {chartData.topArtists.map((artist, index) => {
-                          const base = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#84cc16', '#f97316', '#ec4899', '#6366f1'][index % 10];
-                          const start = adjustColor(base, 35);
-                          const end = adjustColor(base, -20);
+                        {chartData.topArtists.map((artist) => {
+                          const start = adjustColor(artist.baseColor, 35);
+                          const end = adjustColor(artist.baseColor, -20);
                           return (
-                            <linearGradient id={`top-artist-gradient-${index}`} key={artist.id} x1="0" y1="0" x2="1" y2="1">
+                            <linearGradient id={artist.gradientId} key={artist.id} x1="0" y1="0" x2="1" y2="1">
                               <stop offset="0%" stopColor={start} />
-                              <stop offset="70%" stopColor={base} />
+                              <stop offset="70%" stopColor={artist.baseColor} />
                               <stop offset="100%" stopColor={end} />
                             </linearGradient>
                           );
@@ -666,9 +754,9 @@ export default function Home() {
                     <PieChart
                       series={[
                         {
-                          data: chartData.topArtists.map((artist, index) => ({
+                          data: chartData.topArtists.map((artist) => ({
                             ...artist,
-                            color: `url(#top-artist-gradient-${index})`
+                            color: `url(#${artist.gradientId})`
                           })),
                           highlightScope: { fade: 'global', highlight: 'item' },
                           innerRadius: 35,
@@ -678,15 +766,12 @@ export default function Home() {
                       width={300}
                       height={200}
                       margin={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                      slots={{ tooltip: TopArtistsTooltip }}
+                      slotProps={{ tooltip: { trigger: 'item' } }}
                       sx={{
                         width: '100%',
                         '& .MuiChartsLegend-root': {
                           display: 'none !important'
-                        },
-                        '& .MuiChartsTooltip-paper': {
-                          backgroundColor: isDarkMode ? '#27272a' : '#ffffff',
-                          color: isDarkMode ? '#ffffff' : '#000000',
-                          border: `1px solid ${isDarkMode ? '#52525b' : '#d4d4d8'}`
                         },
                         '& text': {
                           fill: '#000000 !important'
@@ -709,7 +794,7 @@ export default function Home() {
                       padding: '0 8px'
                     }}
                   >
-                    {chartData.topArtists.map((artist, index) => (
+                    {chartData.topArtists.map((artist) => (
                       <div
                         key={artist.id}
                         style={{
@@ -725,8 +810,8 @@ export default function Home() {
                             width: '10px',
                             height: '10px',
                             borderRadius: '3px',
-                            backgroundImage: `linear-gradient(90deg, ${adjustColor(['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#84cc16', '#f97316', '#ec4899', '#6366f1'][index % 10], 35)} 0%, ${['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#84cc16', '#f97316', '#ec4899', '#6366f1'][index % 10]} 60%, ${adjustColor(['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#84cc16', '#f97316', '#ec4899', '#6366f1'][index % 10], -20)} 100%)`,
-                            boxShadow: `0 0 6px ${['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#84cc16', '#f97316', '#ec4899', '#6366f1'][index % 10]}66`
+                            backgroundImage: `linear-gradient(90deg, ${adjustColor(artist.baseColor, 35)} 0%, ${artist.baseColor} 60%, ${adjustColor(artist.baseColor, -20)} 100%)`,
+                            boxShadow: `0 0 6px ${artist.baseColor}66`
                           }}
                         />
                         <span>{artist.artist}</span>
@@ -788,7 +873,8 @@ export default function Home() {
                         dataKey: 'plays',
                         color: '#facc15',
                         curve: 'linear',
-                        showMark: false,
+                        showMark: true,
+                        markSize: 3,
                         area: true,
                         valueFormatter: (value) => `${value} plays`
                       },
@@ -798,8 +884,10 @@ export default function Home() {
                     slotProps={{
                       area: {
                         style: { fill: 'url(#activity-gradient)' }
-                      }
+                      },
+                      tooltip: { trigger: 'item' }
                     }}
+                    slots={{ tooltip: ActivityTooltip }}
                     sx={{
                       width: '100%',
                       marginLeft: '-10px',
@@ -819,11 +907,6 @@ export default function Home() {
                       },
                       '& .MuiChartsLegend-root': {
                         color: activityLegendColor
-                      },
-                      '& .MuiChartsTooltip-paper': {
-                        backgroundColor: activityTooltipStyles.background,
-                        color: activityTooltipStyles.color,
-                        border: `1px solid ${activityTooltipStyles.border}`
                       }
                     }}
                   />
