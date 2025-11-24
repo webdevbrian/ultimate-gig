@@ -8,6 +8,11 @@ import { DataType, SortingMode, EditingMode } from "ka-table/enums";
 import { BarChart } from '@mui/x-charts/BarChart';
 import { PieChart } from '@mui/x-charts/PieChart';
 import { LineChart } from '@mui/x-charts/LineChart';
+import {
+  ChartsTooltipContainer,
+  useItemTooltip,
+} from "@mui/x-charts/ChartsTooltip";
+import type { ChartsTooltipProps } from "@mui/x-charts/ChartsTooltip";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { decodeHtmlEntities } from "@/lib/utils";
 import type {
@@ -35,6 +40,15 @@ function adjustColor(hex: string, amount: number) {
 
 const chartCardClass =
   "rounded-lg border border-zinc-200 dark:border-white/10 bg-white dark:bg-gradient-to-b dark:from-[#0f172a] dark:to-[#020617] p-3";
+
+type ChartSongDatum = {
+  id: string;
+  title: string;
+  artist: string;
+  plays: number;
+  label: string;
+  color: string;
+};
 
 export default function Home() {
   const router = useRouter();
@@ -118,7 +132,7 @@ export default function Home() {
 
     // Top 10 played songs with colors
     const songColors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#84cc16', '#f97316', '#ec4899', '#6366f1'];
-    const topSongs = playedSongs
+    const topSongs: ChartSongDatum[] = playedSongs
       .sort((a, b) => (b.playCount || 0) - (a.playCount || 0))
       .slice(0, 10)
       .map((song, index) => ({
@@ -197,6 +211,57 @@ export default function Home() {
     color: isDarkMode ? "#fefce8" : "#1f2937",
     border: isDarkMode ? "#fde047" : "#facc15",
   };
+
+  const TopSongsTooltip = useMemo(() => {
+    const Component = (tooltipProps: ChartsTooltipProps) => {
+      const tooltipItem = useItemTooltip<'bar'>();
+
+      let content: React.ReactNode = null;
+      const dataIndex = tooltipItem?.identifier?.dataIndex;
+      if (dataIndex != null) {
+        const song = chartData.topSongs[dataIndex];
+        if (song) {
+          const gradientStart = adjustColor(song.color, 30);
+          const gradientEnd = adjustColor(song.color, -20);
+          const tooltipBackground = `linear-gradient(90deg, ${gradientStart} 0%, ${song.color} 65%, ${gradientEnd} 100%)`;
+          const primaryTextColor = isDarkMode ? "#050816" : "#020617";
+          const secondaryTextColor = isDarkMode ? "rgba(5, 8, 22, 0.7)" : "rgba(2, 6, 23, 0.65)";
+          const playsValue = tooltipItem?.formattedValue ?? `${song.plays} plays`;
+
+          content = (
+            <div
+              style={{
+                background: tooltipBackground,
+                color: primaryTextColor,
+                padding: "10px 14px",
+                borderRadius: "12px",
+                minWidth: "180px",
+                boxShadow: `0 8px 20px ${song.color}45`,
+                border: isDarkMode
+                  ? "1px solid rgba(255, 255, 255, 0.25)"
+                  : "1px solid rgba(2, 6, 23, 0.08)",
+              }}
+            >
+              <div style={{ fontSize: "11px", fontWeight: 600, letterSpacing: "0.04em", textTransform: "uppercase" }}>
+                {song.artist}
+              </div>
+              <div style={{ fontSize: "13px", fontWeight: 600, marginTop: "2px", color: secondaryTextColor }}>
+                {song.title}
+              </div>
+              <div style={{ fontSize: "24px", fontWeight: 700, lineHeight: "28px", marginTop: "10px" }}>
+                {playsValue}
+              </div>
+            </div>
+          );
+        }
+      }
+
+      return <ChartsTooltipContainer {...tooltipProps}>{content}</ChartsTooltipContainer>;
+    };
+
+    Component.displayName = "TopSongsTooltip";
+    return Component;
+  }, [chartData.topSongs, isDarkMode]);
 
   const handleSongBarClick = useCallback(
     (_event: React.SyntheticEvent | null, params?: { dataIndex?: number | null }) => {
@@ -432,7 +497,7 @@ export default function Home() {
             {/* Top Played Songs */}
             <div className={`${chartCardClass} ${chartSectionTextClass}`}>
               <h3 className="text-sm font-medium text-black dark:text-white mb-2">
-                Top Played Songs (Top 10)
+                Top 10 Played Songs
               </h3>
               {chartData.topSongs.length > 0 ? (
                 <div className="flex flex-col gap-3" style={{ width: '100%' }}>
@@ -473,6 +538,8 @@ export default function Home() {
                       height={topSongsChartHeight - 60}
                       margin={{ left: 0, right: 10, top: 10, bottom: 10 }}
                       onItemClick={handleSongBarClick}
+                      slots={{ tooltip: TopSongsTooltip }}
+                      slotProps={{ tooltip: { trigger: 'item' } }}
                       sx={{
                         width: '100%',
                         marginLeft: '-20px',
@@ -575,7 +642,7 @@ export default function Home() {
             {/* Top Played Artists */}
             <div className={`${chartCardClass} ${chartSectionTextClass}`}>
               <h3 className="text-sm font-medium text-black dark:text-white mb-2">
-                Top Played Artists (Top 10)
+                Top 10 Played Artists
               </h3>
               {chartData.topArtists.length > 0 ? (
                 <div className="flex flex-col gap-3" style={{ width: '100%' }}>
@@ -677,7 +744,7 @@ export default function Home() {
             {/* Play Activity Over Time */}
             <div className={`${chartCardClass} ${chartSectionTextClass}`}>
               <h3 className="text-sm font-medium text-black dark:text-white mb-2">
-                Play Activity (Last 30 Days)
+                30 Day Play Activity
               </h3>
               {chartData.activityData.some(d => d.plays > 0) ? (
                 <div

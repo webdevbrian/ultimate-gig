@@ -37,7 +37,7 @@ export default function RootLayout({
                 <div className="flex items-baseline gap-2">
                   <span className="text-base font-semibold tracking-tight">Ultimate Gig</span>
                   <span className="text-xs text-zinc-500 dark:text-zinc-400">
-                    Playlist & tab manager for live sets
+                    Playlist & tab manager
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
