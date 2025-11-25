@@ -1,3 +1,6 @@
+
+<img width="1024" height="1024" alt="icon" src="https://github.com/user-attachments/assets/e4cc283f-bbc0-4f64-9bf6-9916bdfb75db" />
+
 # Ultimate Gig
 
 Ultimate Gig is a local-first playlist and tab manager built on top of Ultimate Guitar. It lets you import UG playlists, keep them offline on your device, and view, annotate, and auto-scroll tabs during live sets.
