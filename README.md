@@ -1,5 +1,5 @@
 
-<img width="1024" height="1024" alt="icon" src="https://github.com/user-attachments/assets/e4cc283f-bbc0-4f64-9bf6-9916bdfb75db" />
+<img width="256" height="256" alt="icon" src="https://github.com/user-attachments/assets/e4cc283f-bbc0-4f64-9bf6-9916bdfb75db" />
 
 # Ultimate Gig
 
