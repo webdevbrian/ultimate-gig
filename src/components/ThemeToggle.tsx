@@ -78,6 +78,7 @@ export function ThemeToggle() {
       <select
         value={mode}
         onChange={handleChange}
+        suppressHydrationWarning
         className="h-6 rounded border border-zinc-300 bg-white px-1 text-[11px] text-zinc-700 shadow-sm focus:outline-none focus:ring-1 focus:ring-zinc-400 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:focus:ring-zinc-500"
       >
         <option value="system">System</option>

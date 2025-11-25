@@ -5,6 +5,7 @@ import { useParams, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { SpotifyIcon } from "@/components/icons/SpotifyIcon";
 import { YoutubeIcon } from "@/components/icons/YoutubeIcon";
+import { ChordDisplay } from "@/components/chords/ChordDisplay";
 
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import type { PlaylistItem, Song, UgTabResponse } from "@/lib/models";
@@ -51,6 +52,14 @@ export default function SongDetailPage() {
     "ultimate-gig:ui:tab-notes-open",
     false,
   );
+  const [mediaLinkOpen, setMediaLinkOpen] = useLocalStorage<boolean>(
+    "ultimate-gig:ui:media-link-open",
+    false,
+  );
+  const [chordsVisible, setChordsVisible] = useLocalStorage<boolean>(
+    "ultimate-gig:ui:chords-visible",
+    true,
+  );
   const [mediaLinkInput, setMediaLinkInput] = useState("");
   const [mediaStatus, setMediaStatus] = useState<
     | { type: "success"; message: string }
@@ -58,6 +67,7 @@ export default function SongDetailPage() {
     | null
   >(null);
   const [justMarkedAsPlayed, setJustMarkedAsPlayed] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const subtleActionButtonClass =
     "inline-flex items-center justify-center rounded border border-zinc-300 bg-white px-2 py-0.5 text-[11px] font-medium text-zinc-700 shadow-sm transition hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800";
@@ -120,6 +130,7 @@ export default function SongDetailPage() {
 
   const currentNotes = notesBySongId[songId] ?? "";
   const hasNotes = currentNotes.trim().length > 0;
+  const hasMediaLink = Boolean(song?.spotifyTrackId || song?.youtubeUrl);
 
   const ugTabUrl = song?.ugTabUrl ?? "";
 
@@ -189,6 +200,20 @@ export default function SongDetailPage() {
   useEffect(() => {
     setJustMarkedAsPlayed(false);
   }, [songId]);
+
+  // Detect dark mode
+  useEffect(() => {
+    const checkDarkMode = () => {
+      setIsDarkMode(document.documentElement.classList.contains("dark"));
+    };
+    checkDarkMode();
+    const observer = new MutationObserver(checkDarkMode);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["class"],
+    });
+    return () => observer.disconnect();
+  }, []);
 
   const handleSaveMediaLink = (overrideValue?: string) => {
     if (!song) return;
@@ -372,6 +397,8 @@ export default function SongDetailPage() {
   }, [
     controlsCollapsed,
     notesOpen,
+    mediaLinkOpen,
+    chordsVisible,
     rawTabText,
     isLoading,
     song?.id,
@@ -486,73 +513,86 @@ export default function SongDetailPage() {
                 />
               )}
             </section>
-            <section className="space-y-2 rounded-md border border-dashed border-zinc-300 bg-white/70 p-2 text-[11px] text-zinc-700 shadow-sm dark:border-zinc-700 dark:bg-zinc-900/70 dark:text-zinc-200">
+            <section className="space-y-1 rounded-md border border-dashed border-zinc-300 bg-white/70 p-2 text-[11px] text-zinc-700 shadow-sm dark:border-zinc-700 dark:bg-zinc-900/70 dark:text-zinc-200">
               <div className="flex items-center justify-between gap-2">
                 <span className="font-medium">Streaming link</span>
-                <div className="flex flex-wrap items-center gap-2">
-                  {song?.spotifyTrackId ? (
-                    <Link
-                      href={`https://open.spotify.com/track/${song.spotifyTrackId}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-[10px] font-medium text-zinc-500 transition hover:text-[#1DB954]"
-                    >
-                      Open on Spotify
-                    </Link>
-                  ) : null}
-                  {song?.youtubeUrl ? (
-                    <Link
-                      href={song.youtubeUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-[10px] font-medium text-zinc-500 transition hover:text-[#FF0000]"
-                    >
-                      Open on YouTube
-                    </Link>
-                  ) : null}
-                </div>
-              </div>
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                <input
-                  type="text"
-                  value={mediaLinkInput}
-                  onChange={(event) => setMediaLinkInput(event.target.value)}
-                  placeholder="Paste Spotify or YouTube link"
-                  className="flex-1 rounded-md border border-zinc-300 bg-white px-2 py-1 text-[11px] text-zinc-800 shadow-inner outline-none focus:border-zinc-500 focus:ring-0 dark:border-zinc-700 dark:bg-black dark:text-zinc-50 dark:focus:border-zinc-400"
-                />
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => handleSaveMediaLink()}
-                    className={subtleActionButtonClass}
-                  >
-                    Save
-                  </button>
-                  {(song?.spotifyTrackId || song?.youtubeUrl) && (
-                    <button
-                      type="button"
-                      onClick={() => handleClearMediaLink()}
-                      className={subtleActionButtonClass}
-                    >
-                      Clear
-                    </button>
-                  )}
-                </div>
-              </div>
-              {mediaStatus ? (
-                <p
-                  className={
-                    mediaStatus.type === "error"
-                      ? "text-xs text-red-600 dark:text-red-400"
-                      : "text-xs text-emerald-600 dark:text-emerald-400"
-                  }
+                <button
+                  type="button"
+                  onClick={() => setMediaLinkOpen((prev) => !prev)}
+                  className={subtleActionButtonClass}
                 >
-                  {mediaStatus.message}
-                </p>
-              ) : (
-                <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                  Examples: https://open.spotify.com/track/… or https://youtu.be/…
-                </p>
+                  {mediaLinkOpen ? "Hide link" : hasMediaLink ? "Show link" : "Add link"}
+                </button>
+              </div>
+              {mediaLinkOpen && (
+                <>
+                  {hasMediaLink && (
+                    <div className="flex flex-wrap items-center gap-2">
+                      {song?.spotifyTrackId ? (
+                        <Link
+                          href={`https://open.spotify.com/track/${song.spotifyTrackId}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-[10px] font-medium text-zinc-500 transition hover:text-[#1DB954]"
+                        >
+                          Open on Spotify
+                        </Link>
+                      ) : null}
+                      {song?.youtubeUrl ? (
+                        <Link
+                          href={song.youtubeUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-[10px] font-medium text-zinc-500 transition hover:text-[#FF0000]"
+                        >
+                          Open on YouTube
+                        </Link>
+                      ) : null}
+                    </div>
+                  )}
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                    <input
+                      type="text"
+                      value={mediaLinkInput}
+                      onChange={(event) => setMediaLinkInput(event.target.value)}
+                      placeholder="Paste Spotify or YouTube link"
+                      className="flex-1 rounded-md border border-zinc-300 bg-white px-2 py-1 text-[11px] text-zinc-800 shadow-inner outline-none focus:border-zinc-500 focus:ring-0 dark:border-zinc-700 dark:bg-black dark:text-zinc-50 dark:focus:border-zinc-400"
+                    />
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleSaveMediaLink()}
+                        className={subtleActionButtonClass}
+                      >
+                        Save
+                      </button>
+                      {hasMediaLink && (
+                        <button
+                          type="button"
+                          onClick={() => handleClearMediaLink()}
+                          className={subtleActionButtonClass}
+                        >
+                          Clear
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  {mediaStatus ? (
+                    <p
+                      className={
+                        mediaStatus.type === "error"
+                          ? "text-xs text-red-600 dark:text-red-400"
+                          : "text-xs text-emerald-600 dark:text-emerald-400"
+                      }
+                    >
+                      {mediaStatus.message}
+                    </p>
+                  ) : (
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                      Examples: https://open.spotify.com/track/… or https://youtu.be/…
+                    </p>
+                  )}
+                </>
               )}
             </section>
           </>
@@ -603,13 +643,24 @@ export default function SongDetailPage() {
 
       <section className="flex min-h-0 flex-1 w-full flex-col space-y-3 rounded-lg border border-black/5 bg-white/80 p-4 text-sm shadow-sm dark:border-white/10 dark:bg-black/60">
         <div className="flex flex-wrap items-center justify-between gap-3 text-[11px] text-zinc-600 dark:text-zinc-400">
-          <button
-            type="button"
-            onClick={() => setControlsCollapsed((prev) => !prev)}
-            className={subtleActionButtonClass}
-          >
-            {controlsCollapsed ? "Show header" : "Hide header"}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setControlsCollapsed((prev) => !prev)}
+              className={subtleActionButtonClass}
+            >
+              {controlsCollapsed ? "Show header" : "Hide header"}
+            </button>
+            {tab?.chordShapes && Object.keys(tab.chordShapes).length > 0 && (
+              <button
+                type="button"
+                onClick={() => setChordsVisible((prev) => !prev)}
+                className={subtleActionButtonClass}
+              >
+                {chordsVisible ? "Hide chords" : "Show chords"}
+              </button>
+            )}
+          </div>
 
           <div className="flex flex-wrap items-center gap-3">
             <div className="flex items-center gap-1">
@@ -669,6 +720,13 @@ export default function SongDetailPage() {
             </button>
           </div>
         </div>
+
+        {/* Chord diagrams section */}
+        {tab?.chordShapes && Object.keys(tab.chordShapes).length > 0 && chordsVisible && (
+          <div className="rounded-md border border-dashed border-zinc-300 bg-white/70 p-3 shadow-sm dark:border-zinc-700 dark:bg-zinc-900/70">
+            <ChordDisplay chordShapes={tab.chordShapes} isDark={isDarkMode} />
+          </div>
+        )}
 
         <div
           ref={setScrollContainerRef}

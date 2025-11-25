@@ -39,6 +39,10 @@ export default function Home() {
     "ultimate-gig:ui:playlists-table",
     {} as any,
   );
+  const [importOpen, setImportOpen] = useLocalStorage<boolean>(
+    "ultimate-gig:ui:import-open",
+    false,
+  );
 
   const playlistsTable = useTable({
     onDispatch: (_action, tableState) => {
@@ -267,42 +271,49 @@ export default function Home() {
         </p>
       </section>
 
-      <section className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4 text-sm shadow-sm">
-        <form
-          className="flex flex-col gap-3 sm:flex-row"
-          onSubmit={handleImportSubmit}
-        >
-          <div className="flex-1">
-            <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
-              Ultimate Guitar shared playlist URL
-            </label>
-            <input
-              type="url"
-              value={importUrl}
-              onChange={(e) => setImportUrl(e.target.value)}
-              placeholder="https://www.ultimate-guitar.com/user/playlist/shared?h=..."
-              className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground outline-none ring-0 transition focus:border-ring"
-            />
-          </div>
-          <div className="flex items-end">
-            <button
-              type="submit"
-              disabled={isImporting}
-              className="inline-flex items-center justify-center rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-zinc-800 dark:bg-white dark:text-black dark:hover:bg-white/90"
+      <section className="space-y-1 rounded-md border border-dashed border-zinc-300 bg-white/70 p-2 text-[11px] text-zinc-700 shadow-sm dark:border-zinc-700 dark:bg-zinc-900/70 dark:text-zinc-200">
+        <div className="flex items-center justify-between gap-2">
+          <span className="font-medium">Import playlist</span>
+          <button
+            type="button"
+            onClick={() => setImportOpen((prev) => !prev)}
+            className="inline-flex items-center justify-center rounded border border-zinc-300 bg-white px-2 py-0.5 text-[11px] font-medium text-zinc-700 shadow-sm transition hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
+          >
+            {importOpen ? "Hide import" : "Add playlist"}
+          </button>
+        </div>
+        {importOpen && (
+          <>
+            <form
+              className="flex flex-col gap-2 sm:flex-row sm:items-center"
+              onSubmit={handleImportSubmit}
             >
-              {isImporting ? "Importing…" : "Import playlist"}
-            </button>
-          </div>
-        </form>
-        {importError ? (
-          <p className="text-xs font-medium text-red-600 dark:text-red-400">
-            {importError}
-          </p>
-        ) : null}
-        <p className="text-xs text-zinc-500 dark:text-zinc-500">
-          This currently stores playlist metadata locally and will later sync
-          song titles, tabs, and Spotify/YouTube links.
-        </p>
+              <input
+                type="url"
+                value={importUrl}
+                onChange={(e) => setImportUrl(e.target.value)}
+                placeholder="https://www.ultimate-guitar.com/user/playlist/shared?h=..."
+                className="flex-1 rounded-md border border-zinc-300 bg-white px-2 py-1 text-[11px] text-zinc-800 shadow-inner outline-none focus:border-zinc-500 focus:ring-0 dark:border-zinc-700 dark:bg-black dark:text-zinc-50 dark:focus:border-zinc-400"
+              />
+              <button
+                type="submit"
+                disabled={isImporting}
+                className="inline-flex items-center justify-center rounded border border-zinc-300 bg-white px-2 py-0.5 text-[11px] font-medium text-zinc-700 shadow-sm transition hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
+              >
+                {isImporting ? "Importing…" : "Import"}
+              </button>
+            </form>
+            {importError ? (
+              <p className="text-xs font-medium text-red-600 dark:text-red-400">
+                {importError}
+              </p>
+            ) : (
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                Paste your Ultimate Guitar shared playlist URL above
+              </p>
+            )}
+          </>
+        )}
       </section>
 
       <section className="ka-table-wrapper overflow-hidden rounded-lg border border-zinc-200 bg-white text-sm shadow-sm dark:border-white/10 dark:bg-black/60">
