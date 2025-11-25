@@ -737,19 +737,48 @@ export default function SongDetailPage() {
               Loading tab from Ultimate Guitar…
             </p>
           ) : error ? (
-            <div className="space-y-2">
-              <p className="text-xs font-medium text-red-600 dark:text-red-400">{error}</p>
-              <p className="text-xs text-zinc-500 dark:text-zinc-500">
-                You can also open this song directly on Ultimate Guitar:
-              </p>
-              <a
-                href={song.ugTabUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="text-xs font-medium text-blue-600 hover:underline dark:text-blue-400"
-              >
-                {song.ugTabUrl}
-              </a>
+            <div className="space-y-3">
+              {song?.ugTabType === "pro" ? (
+                <>
+                  <div className="space-y-2 rounded-md border border-zinc-300 bg-zinc-50 p-3 dark:border-zinc-700 dark:bg-zinc-800">
+                    <p className="text-xs font-medium text-zinc-900 dark:text-zinc-100">
+                      Guitar Pro Tab
+                    </p>
+                    <p className="text-xs text-zinc-600 dark:text-zinc-400">
+                      This is a Guitar Pro tab that requires special software to view.
+                      Guitar Pro tabs include interactive features like playback, tempo control, and multi-track arrangements.
+                    </p>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <a
+                      href={song.ugTabUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center justify-center rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-zinc-800 dark:bg-white dark:text-black dark:hover:bg-white/90"
+                    >
+                      Open on Ultimate Guitar
+                    </a>
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                      You'll need a Guitar Pro subscription or the Guitar Pro software to view this tab
+                    </p>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p className="text-xs font-medium text-red-600 dark:text-red-400">{error}</p>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-500">
+                    You can also open this song directly on Ultimate Guitar:
+                  </p>
+                  <a
+                    href={song.ugTabUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-xs font-medium text-blue-600 hover:underline dark:text-blue-400"
+                  >
+                    {song.ugTabUrl}
+                  </a>
+                </>
+              )}
             </div>
           ) : rawTabText ? (
             <pre
