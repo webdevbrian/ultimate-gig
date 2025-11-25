@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import Image from "next/image";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -18,6 +19,10 @@ export const metadata: Metadata = {
   title: "Ultimate Gig",
   description:
     "Sync and manage Ultimate Guitar playlists with notes, playback tracking, and gig tools.",
+  icons: {
+    icon: "/icon.png",
+    apple: "/icon.png",
+  },
 };
 
 export default function RootLayout({
@@ -58,12 +63,15 @@ export default function RootLayout({
           <header className="border-b border-black/5 bg-white/70 px-4 py-3 text-sm font-medium backdrop-blur dark:border-white/10 dark:bg-black/70">
             <div className="mx-auto flex max-w-5xl items-center justify-between gap-4">
               <div className="flex items-center gap-3">
-                <div className="flex items-baseline gap-2">
-                  <span className="text-base font-semibold tracking-tight">Ultimate Gig</span>
-                  <span className="text-xs text-zinc-500 dark:text-zinc-400">
-                    Playlist & tab manager
-                  </span>
-                </div>
+                <Link href="/" className="flex items-center gap-2">
+                  <Image
+                    src="/icon.png"
+                    alt="Ultimate Gig"
+                    width={24}
+                    height={24}
+                    className="rounded"
+                  />
+                </Link>
                 <div className="flex items-center gap-2">
                   <Link
                     href="/settings"
