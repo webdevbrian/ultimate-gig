@@ -15,7 +15,13 @@ import {
 import type { ChartsTooltipProps } from "@mui/x-charts/ChartsTooltip";
 
 import { useLocalStorage } from "@/hooks/useLocalStorage";
-import type { Playlist, PlaylistItem, Song } from "@/lib/models";
+import type {
+  CachedTabEntry,
+  Playlist,
+  PlaylistItem,
+  Song,
+  UgTabResponse,
+} from "@/lib/models";
 import { SpotifyIcon } from "@/components/icons/SpotifyIcon";
 import { YoutubeIcon } from "@/components/icons/YoutubeIcon";
 import { decodeHtmlEntities } from "@/lib/utils";
@@ -136,6 +142,9 @@ export default function PlaylistDetailPage() {
     "ultimate-gig:playlist-items",
     [],
   );
+  const [tabCache, setTabCache, tabCacheHydrated] = useLocalStorage<
+    Record<string, CachedTabEntry>
+  >("ultimate-gig:tab-cache", {});
 
   const hydrated = playlistsHydrated && songsHydrated && playlistItemsHydrated;
 
@@ -156,6 +165,10 @@ export default function PlaylistDetailPage() {
   );
   const subtleActionButtonClass =
     "inline-flex items-center justify-center rounded border border-zinc-300 bg-white px-2 py-0.5 text-[11px] font-medium text-zinc-700 shadow-sm transition hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800";
+  const inlineRefreshButtonClass =
+    "inline-flex items-center gap-1 rounded border border-zinc-300 px-1.5 py-0.5 text-[10px] font-semibold text-zinc-600 transition hover:bg-zinc-50 disabled:opacity-50 disabled:cursor-not-allowed dark:border-zinc-700 dark:text-zinc-100 dark:hover:bg-zinc-800";
+  const [refreshingTabIds, setRefreshingTabIds] = useState<Set<string>>(new Set());
+  const [tabRefreshErrors, setTabRefreshErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     const checkDarkMode = () => {
@@ -339,6 +352,61 @@ export default function PlaylistDetailPage() {
       router.push(`/songs/${songId}?playlistId=${playlistId}`);
     }
   }, [chartData.topSongs, router, playlistId]);
+
+  const handleRefreshTab = useCallback(
+    async (song: Song) => {
+      if (!song.ugTabUrl) return;
+      const songId = song.id;
+
+      setRefreshingTabIds((prev) => new Set(prev).add(songId));
+      setTabRefreshErrors((prev) => {
+        const next = { ...prev };
+        delete next[songId];
+        return next;
+      });
+
+      try {
+        const res = await fetch("/api/ug/fetch-tab", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ url: song.ugTabUrl, mode: "live" }),
+        });
+
+        if (!res.ok) {
+          let message = "Refresh failed";
+          try {
+            const data = (await res.json()) as { error?: string };
+            if (data?.error) message = data.error;
+          } catch {}
+          throw new Error(message);
+        }
+
+        const data = (await res.json()) as UgTabResponse;
+        setTabCache((current) => ({
+          ...current,
+          [songId]: {
+            songId,
+            ugTabUrl: song.ugTabUrl,
+            cachedAt: new Date().toISOString(),
+            tab: data,
+          },
+        }));
+      } catch (error) {
+        const message =
+          error instanceof Error && error.message ? error.message : "Refresh failed";
+        setTabRefreshErrors((prev) => ({ ...prev, [songId]: message }));
+      } finally {
+        setRefreshingTabIds((prev) => {
+          const next = new Set(prev);
+          next.delete(songId);
+          return next;
+        });
+      }
+    },
+    [setTabCache],
+  );
 
   const TopSongsTooltip = useMemo(() => {
     const Component = (tooltipProps: ChartsTooltipProps) => {
@@ -570,7 +638,7 @@ export default function PlaylistDetailPage() {
                         padding: '0 8px'
                       }}
                     >
-                      {chartData.topSongs.map((song, index) => (
+                      {chartData.topSongs.map((song) => (
                         <div
                           key={song.id}
                           style={{
@@ -868,35 +936,87 @@ export default function PlaylistDetailPage() {
                   content: (props) => {
                     if (props.column.key === "title") {
                       const row = props.rowData as (typeof data)[number];
+                      const isRefreshing = refreshingTabIds.has(row.songId);
+                      const refreshError = tabRefreshErrors[row.songId];
+                      const cachedEntry = tabCacheHydrated ? tabCache[row.songId] : undefined;
+                      const cachedAt = cachedEntry?.cachedAt
+                        ? new Date(cachedEntry.cachedAt).toLocaleString()
+                        : null;
                       return (
-                        <div className="flex items-center gap-2 font-medium text-zinc-900 dark:text-zinc-50">
-                          <Link
-                            href={`/songs/${row.songId}?playlistId=${playlistId}`}
-                            className="hover:underline"
-                          >
-                            {row.title}
-                          </Link>
-                          {row.song.spotifyTrackId ? (
+                        <div className="flex flex-col gap-1">
+                          <div className="flex flex-wrap items-center gap-2 font-medium text-zinc-900 dark:text-zinc-50">
                             <Link
-                              href={`https://open.spotify.com/track/${row.song.spotifyTrackId}`}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="text-zinc-500 transition hover:text-[#1DB954]"
-                              aria-label={`Open ${row.title} on Spotify`}
+                              href={`/songs/${row.songId}?playlistId=${playlistId}`}
+                              className="hover:underline"
                             >
-                              <SpotifyIcon className="h-4 w-4" aria-hidden="true" />
+                              {row.title}
                             </Link>
+                            {row.song.spotifyTrackId ? (
+                              <Link
+                                href={`https://open.spotify.com/track/${row.song.spotifyTrackId}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-zinc-500 transition hover:text-[#1DB954]"
+                                aria-label={`Open ${row.title} on Spotify`}
+                              >
+                                <SpotifyIcon className="h-4 w-4" aria-hidden="true" />
+                              </Link>
+                            ) : null}
+                            {row.song.youtubeUrl ? (
+                              <Link
+                                href={row.song.youtubeUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-zinc-500 transition hover:text-[#FF0000]"
+                                aria-label={`Open ${row.title} on YouTube`}
+                              >
+                                <YoutubeIcon className="h-4 w-4" aria-hidden="true" />
+                              </Link>
+                            ) : null}
+                            <button
+                              type="button"
+                              onClick={() => handleRefreshTab(row.song)}
+                              disabled={isRefreshing || !row.song.ugTabUrl}
+                              className={inlineRefreshButtonClass}
+                            >
+                              {isRefreshing ? (
+                                <>
+                                  <svg
+                                    className="h-3 w-3 animate-spin"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    aria-hidden="true"
+                                  >
+                                    <circle
+                                      className="opacity-25"
+                                      cx="12"
+                                      cy="12"
+                                      r="10"
+                                      stroke="currentColor"
+                                      strokeWidth="3"
+                                    />
+                                    <path
+                                      className="opacity-75"
+                                      fill="currentColor"
+                                      d="M4 12a8 8 0 018-8v3a5 5 0 00-5 5H4z"
+                                    />
+                                  </svg>
+                                  Refreshing
+                                </>
+                              ) : (
+                                <>Refresh tab</>
+                              )}
+                            </button>
+                          </div>
+                          {cachedAt ? (
+                            <span className="text-[10px] text-zinc-500 dark:text-zinc-400">
+                              Cached {cachedAt}
+                            </span>
                           ) : null}
-                          {row.song.youtubeUrl ? (
-                            <Link
-                              href={row.song.youtubeUrl}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="text-zinc-500 transition hover:text-[#FF0000]"
-                              aria-label={`Open ${row.title} on YouTube`}
-                            >
-                              <YoutubeIcon className="h-4 w-4" aria-hidden="true" />
-                            </Link>
+                          {refreshError ? (
+                            <span className="text-[10px] text-red-600 dark:text-red-400">
+                              {refreshError}
+                            </span>
                           ) : null}
                         </div>
                       );

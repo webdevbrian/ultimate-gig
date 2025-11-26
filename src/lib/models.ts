@@ -92,3 +92,10 @@ export interface UgTabResponse {
   tuningValue?: string;
   chordShapes?: Record<string, UgChordShape>;
 }
+
+export interface CachedTabEntry {
+  songId: string;
+  ugTabUrl: string;
+  cachedAt: string;
+  tab: UgTabResponse;
+}

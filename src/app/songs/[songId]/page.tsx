@@ -8,7 +8,12 @@ import { YoutubeIcon } from "@/components/icons/YoutubeIcon";
 import { ChordDisplay } from "@/components/chords/ChordDisplay";
 
 import { useLocalStorage } from "@/hooks/useLocalStorage";
-import type { PlaylistItem, Song, UgTabResponse } from "@/lib/models";
+import type {
+  CachedTabEntry,
+  PlaylistItem,
+  Song,
+  UgTabResponse,
+} from "@/lib/models";
 import { decodeHtmlEntities } from "@/lib/utils";
 
 export default function SongDetailPage() {
@@ -25,6 +30,9 @@ export default function SongDetailPage() {
     "ultimate-gig:playlist-items",
     [],
   );
+  const [tabCache, setTabCache, tabCacheHydrated] = useLocalStorage<
+    Record<string, CachedTabEntry>
+  >("ultimate-gig:tab-cache", {});
   const [tab, setTab] = useState<UgTabResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -158,10 +166,26 @@ export default function SongDetailPage() {
   const hasMediaLink = Boolean(song?.spotifyTrackId || song?.youtubeUrl);
 
   const ugTabUrl = song?.ugTabUrl ?? "";
+  const cachedTabEntry = songId ? tabCache[songId] : undefined;
+  const cachedTabMatches = Boolean(
+    cachedTabEntry && ugTabUrl && cachedTabEntry.ugTabUrl === ugTabUrl,
+  );
 
   useEffect(() => {
     if (!ugTabUrl) {
       setTab(null);
+      setIsLoading(false);
+      return;
+    }
+
+    if (!tabCacheHydrated) {
+      return;
+    }
+
+    if (cachedTabMatches && cachedTabEntry) {
+      setTab(cachedTabEntry.tab);
+      setError(null);
+      setIsLoading(false);
       return;
     }
 
@@ -190,7 +214,18 @@ export default function SongDetailPage() {
         }
 
         const data = (await res.json()) as UgTabResponse;
-        if (!cancelled) setTab(data);
+        if (!cancelled) {
+          setTab(data);
+          setTabCache((current) => ({
+            ...current,
+            [songId]: {
+              songId,
+              ugTabUrl,
+              cachedAt: new Date().toISOString(),
+              tab: data,
+            },
+          }));
+        }
       } catch {
         if (!cancelled) setError("Failed to load tab");
       } finally {
@@ -203,7 +238,14 @@ export default function SongDetailPage() {
     return () => {
       cancelled = true;
     };
-  }, [ugTabUrl]);
+  }, [
+    cachedTabEntry,
+    cachedTabMatches,
+    setTabCache,
+    songId,
+    tabCacheHydrated,
+    ugTabUrl,
+  ]);
 
   const rawTabText = useMemo(
     () => (tab?.content ? formatWikiTabAsPlainText(tab.content) : ""),
