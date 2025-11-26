@@ -5,20 +5,22 @@ import type { UgChordShape } from "@/lib/models";
 interface UkuleleChordProps {
   chord: UgChordShape;
   isDark?: boolean;
+  scale?: number;
 }
 
-export function UkuleleChord({ chord, isDark = false }: UkuleleChordProps) {
+export function UkuleleChord({ chord, isDark = false, scale = 1 }: UkuleleChordProps) {
   const { name, baseFret, frets, fingers, barres } = chord;
 
   // Constants for rendering - ukulele has 4 strings
   const numStrings = 4;
   const numFrets = 5;
-  const stringSpacing = 24;
-  const fretHeight = 28;
-  const leftMargin = 30;
-  const topMargin = 30;
-  const width = leftMargin + stringSpacing * (numStrings - 1) + 20;
-  const height = topMargin + fretHeight * numFrets + 20;
+  const stringSpacing = 24 * scale;
+  const fretHeight = 28 * scale;
+  const leftMargin = 30 * scale;
+  const topMargin = 30 * scale;
+  const padding = 8 * scale;
+  const width = leftMargin + stringSpacing * (numStrings - 1) + 20 * scale;
+  const height = topMargin + fretHeight * numFrets + 20 * scale;
 
   // Colors based on theme
   const lineColor = isDark ? "#ffffff" : "#000000";
@@ -38,19 +40,19 @@ export function UkuleleChord({ chord, isDark = false }: UkuleleChordProps) {
     <div
       style={{
         display: "inline-block",
-        padding: "8px",
+        padding: `${padding}px`,
         backgroundColor,
-        borderRadius: "6px",
+        borderRadius: `${6 * scale}px`,
       }}
     >
       <svg width={width} height={height} xmlns="http://www.w3.org/2000/svg">
         {/* Chord name */}
         <text
           x={width / 2}
-          y={15}
+          y={15 * scale}
           textAnchor="middle"
           style={{
-            fontSize: "14px",
+            fontSize: `${14 * scale}px`,
             fontWeight: "600",
             fill: textColor,
           }}
@@ -61,11 +63,11 @@ export function UkuleleChord({ chord, isDark = false }: UkuleleChordProps) {
         {/* Base fret indicator (if not at fret 1) */}
         {displayBaseFret > 1 && (
           <text
-            x={leftMargin - 12}
+            x={leftMargin - 12 * scale}
             y={topMargin + fretHeight / 2}
             textAnchor="end"
             style={{
-              fontSize: "11px",
+              fontSize: `${11 * scale}px`,
               fill: textColor,
             }}
           >
@@ -76,7 +78,7 @@ export function UkuleleChord({ chord, isDark = false }: UkuleleChordProps) {
         {/* Draw frets */}
         {Array.from({ length: numFrets + 1 }).map((_, fretIndex) => {
           const y = topMargin + fretIndex * fretHeight;
-          const strokeWidth = fretIndex === 0 && baseFret === 1 ? 3 : 1;
+          const strokeWidth = (fretIndex === 0 && baseFret === 1 ? 3 : 1) * scale;
           return (
             <line
               key={`fret-${fretIndex}`}
@@ -101,7 +103,7 @@ export function UkuleleChord({ chord, isDark = false }: UkuleleChordProps) {
               x2={x}
               y2={topMargin + fretHeight * numFrets}
               stroke={lineColor}
-              strokeWidth={1}
+              strokeWidth={1 * scale}
             />
           );
         })}
@@ -128,7 +130,7 @@ export function UkuleleChord({ chord, isDark = false }: UkuleleChordProps) {
                 x2={x2}
                 y2={y}
                 stroke={barreColor}
-                strokeWidth={16}
+                strokeWidth={16 * scale}
                 strokeLinecap="round"
                 opacity={0.9}
               />
@@ -147,20 +149,20 @@ export function UkuleleChord({ chord, isDark = false }: UkuleleChordProps) {
             return (
               <g key={`string-${stringIndex}-indicator`}>
                 <line
-                  x1={x - 4}
-                  y1={topMargin - 16}
-                  x2={x + 4}
-                  y2={topMargin - 8}
+                  x1={x - 4 * scale}
+                  y1={topMargin - 16 * scale}
+                  x2={x + 4 * scale}
+                  y2={topMargin - 8 * scale}
                   stroke={mutedColor}
-                  strokeWidth={2}
+                  strokeWidth={2 * scale}
                 />
                 <line
-                  x1={x - 4}
-                  y1={topMargin - 8}
-                  x2={x + 4}
-                  y2={topMargin - 16}
+                  x1={x - 4 * scale}
+                  y1={topMargin - 8 * scale}
+                  x2={x + 4 * scale}
+                  y2={topMargin - 16 * scale}
                   stroke={mutedColor}
-                  strokeWidth={2}
+                  strokeWidth={2 * scale}
                 />
               </g>
             );
@@ -172,11 +174,11 @@ export function UkuleleChord({ chord, isDark = false }: UkuleleChordProps) {
               <circle
                 key={`string-${stringIndex}-indicator`}
                 cx={x}
-                cy={topMargin - 12}
-                r={5}
+                cy={topMargin - 12 * scale}
+                r={5 * scale}
                 fill="none"
                 stroke={lineColor}
-                strokeWidth={2}
+                strokeWidth={2 * scale}
               />
             );
           }
@@ -189,15 +191,15 @@ export function UkuleleChord({ chord, isDark = false }: UkuleleChordProps) {
 
           return (
             <g key={`string-${stringIndex}-dot`}>
-              <circle cx={x} cy={y} r={7} fill={dotColor} />
+              <circle cx={x} cy={y} r={7 * scale} fill={dotColor} />
               {ukuleleFingers[stringIndex] > 0 && (
                 <text
                   x={x}
-                  y={y + 1}
+                  y={y + 1 * scale}
                   textAnchor="middle"
                   dominantBaseline="middle"
                   style={{
-                    fontSize: "10px",
+                    fontSize: `${10 * scale}px`,
                     fontWeight: "600",
                     fill: isDark ? "#000000" : "#ffffff",
                   }}

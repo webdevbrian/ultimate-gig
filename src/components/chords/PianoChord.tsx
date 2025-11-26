@@ -4,6 +4,7 @@ interface PianoChordProps {
   chordName: string;
   notes: string[];
   isDark?: boolean;
+  scale?: number;
 }
 
 // Map note names to piano key indices (C = 0, C# = 1, D = 2, etc.)
@@ -30,17 +31,19 @@ const noteToIndex: Record<string, number> = {
 // Which keys are black keys (sharps/flats)
 const blackKeyIndices = [1, 3, 6, 8, 10];
 
-export function PianoChord({ chordName, notes, isDark = false }: PianoChordProps) {
-  const whiteKeyWidth = 28;
-  const whiteKeyHeight = 100;
-  const blackKeyWidth = 18;
-  const blackKeyHeight = 65;
+export function PianoChord({ chordName, notes, isDark = false, scale = 1 }: PianoChordProps) {
+  const whiteKeyWidth = 28 * scale;
+  const whiteKeyHeight = 100 * scale;
+  const blackKeyWidth = 18 * scale;
+  const blackKeyHeight = 65 * scale;
   const numOctaves = 2; // Show 2 octaves
   const numWhiteKeys = 7 * numOctaves + 1; // C-C for each octave
-  const leftMargin = 10;
-  const topMargin = 30;
-  const width = leftMargin + numWhiteKeys * whiteKeyWidth + 10;
-  const height = topMargin + whiteKeyHeight + 20;
+  const leftMargin = 10 * scale;
+  const topMargin = 30 * scale;
+  const padding = 8 * scale;
+  const borderRadius = 6 * scale;
+  const width = leftMargin + numWhiteKeys * whiteKeyWidth + 10 * scale;
+  const height = topMargin + whiteKeyHeight + 20 * scale;
 
   // Colors based on theme
   const backgroundColor = isDark ? "#1a1a1a" : "#ffffff";
@@ -62,26 +65,6 @@ export function PianoChord({ chordName, notes, isDark = false }: PianoChordProps
       highlightedKeys.add(keyIndex);
     }
   });
-
-  // Helper to get white key position
-  const getWhiteKeyX = (keyIndex: number): number => {
-    const whiteKeysPerOctave = 7;
-    const octave = Math.floor(keyIndex / 12);
-    const noteInOctave = keyIndex % 12;
-    // Map note to white key within octave (C=0, D=1, E=2, F=3, G=4, A=5, B=6)
-    const whiteKeyMap: Record<number, number> = {
-      0: 0, // C
-      2: 1, // D
-      4: 2, // E
-      5: 3, // F
-      7: 4, // G
-      9: 5, // A
-      11: 6, // B
-    };
-    const whiteKeyInOctave = whiteKeyMap[noteInOctave];
-    if (whiteKeyInOctave === undefined) return -1;
-    return leftMargin + (octave * whiteKeysPerOctave + whiteKeyInOctave) * whiteKeyWidth;
-  };
 
   // Helper to get black key position
   const getBlackKeyX = (keyIndex: number): number => {
@@ -105,19 +88,19 @@ export function PianoChord({ chordName, notes, isDark = false }: PianoChordProps
     <div
       style={{
         display: "inline-block",
-        padding: "8px",
+        padding: `${padding}px`,
         backgroundColor,
-        borderRadius: "6px",
+        borderRadius: `${borderRadius}px`,
       }}
     >
       <svg width={width} height={height} xmlns="http://www.w3.org/2000/svg">
         {/* Chord name */}
         <text
           x={width / 2}
-          y={15}
+          y={15 * scale}
           textAnchor="middle"
           style={{
-            fontSize: "14px",
+            fontSize: `${14 * scale}px`,
             fontWeight: "600",
             fill: textColor,
           }}
@@ -146,7 +129,7 @@ export function PianoChord({ chordName, notes, isDark = false }: PianoChordProps
               height={whiteKeyHeight}
               fill={isHighlighted ? highlightColor : whiteKeyColor}
               stroke={whiteKeyStroke}
-              strokeWidth={1}
+              strokeWidth={1 * scale}
             />
           );
         })}
@@ -168,7 +151,7 @@ export function PianoChord({ chordName, notes, isDark = false }: PianoChordProps
                 height={blackKeyHeight}
                 fill={isHighlighted ? highlightColor : blackKeyColor}
                 stroke={whiteKeyStroke}
-                strokeWidth={1}
+                strokeWidth={1 * scale}
               />
             );
           });
