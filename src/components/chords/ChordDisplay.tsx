@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { UgChordShape } from "@/lib/models";
 import { GuitarChord } from "./GuitarChord";
 import { UkuleleChord } from "./UkuleleChord";
+import { BanjoChord } from "./BanjoChord";
 import { PianoChord, parseChordToNotes } from "./PianoChord";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 
@@ -12,7 +13,7 @@ interface ChordDisplayProps {
   isDark?: boolean;
 }
 
-type InstrumentType = "guitar" | "ukulele" | "piano";
+type InstrumentType = "guitar" | "ukulele" | "banjo" | "piano";
 
 export function ChordDisplay({ chordShapes, isDark = false }: ChordDisplayProps) {
   const [instrument, setInstrument] = useState<InstrumentType>("guitar");
@@ -68,6 +69,13 @@ export function ChordDisplay({ chordShapes, isDark = false }: ChordDisplayProps)
           </button>
           <button
             type="button"
+            onClick={() => setInstrument("banjo")}
+            className={buttonClass(instrument === "banjo")}
+          >
+            Banjo
+          </button>
+          <button
+            type="button"
             onClick={() => setInstrument("piano")}
             className={buttonClass(instrument === "piano")}
           >
@@ -114,6 +122,9 @@ export function ChordDisplay({ chordShapes, isDark = false }: ChordDisplayProps)
           }
           if (instrument === "ukulele") {
             return <UkuleleChord key={chord.name} chord={chord} isDark={isDark} scale={scale} />;
+          }
+          if (instrument === "banjo") {
+            return <BanjoChord key={chord.name} chord={chord} isDark={isDark} scale={scale} />;
           }
           if (instrument === "piano") {
             const notes = parseChordToNotes(chord.name);

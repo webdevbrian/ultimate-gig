@@ -2,17 +2,16 @@
 
 import type { UgChordShape } from "@/lib/models";
 
-interface UkuleleChordProps {
+interface BanjoChordProps {
   chord: UgChordShape;
   isDark?: boolean;
   scale?: number;
 }
 
-export function UkuleleChord({ chord, isDark = false, scale = 1 }: UkuleleChordProps) {
+export function BanjoChord({ chord, isDark = false, scale = 1 }: BanjoChordProps) {
   const { name, baseFret, frets, fingers, barres } = chord;
 
-  // Constants for rendering - ukulele has 4 strings
-  const numStrings = 4;
+  const numStrings = 5;
   const numFrets = 5;
   const stringSpacing = 24 * scale;
   const fretHeight = 28 * scale;
@@ -23,7 +22,6 @@ export function UkuleleChord({ chord, isDark = false, scale = 1 }: UkuleleChordP
   const width = leftMargin + stringSpacing * (numStrings - 1) + 20 * scale;
   const height = topMargin + fretHeight * numFrets + 20 * scale;
 
-  // Colors based on theme
   const lineColor = isDark ? "#ffffff" : "#000000";
   const mutedColor = isDark ? "#666666" : "#999999";
   const backgroundColor = isDark ? "#1a1a1a" : "#ffffff";
@@ -31,9 +29,8 @@ export function UkuleleChord({ chord, isDark = false, scale = 1 }: UkuleleChordP
   const dotColor = isDark ? "#ffffff" : "#000000";
   const barreColor = isDark ? "#ffffff" : "#000000";
 
-  // Only use first 4 strings for ukulele (G C E A)
-  const ukuleleFrets = frets.slice(0, 4);
-  const ukuleleFingers = fingers.slice(0, 4);
+  const banjoFrets = frets.slice(0, numStrings);
+  const banjoFingers = fingers.slice(0, numStrings);
 
   const displayBaseFret = baseFret > 1 ? baseFret : 1;
 
@@ -47,7 +44,6 @@ export function UkuleleChord({ chord, isDark = false, scale = 1 }: UkuleleChordP
       }}
     >
       <svg width={width} height={height} xmlns="http://www.w3.org/2000/svg">
-        {/* Chord name */}
         <text
           x={width / 2}
           y={chordNameY}
@@ -61,7 +57,6 @@ export function UkuleleChord({ chord, isDark = false, scale = 1 }: UkuleleChordP
           {name}
         </text>
 
-        {/* Base fret indicator (if not at fret 1) */}
         {displayBaseFret > 1 && (
           <text
             x={leftMargin - 12 * scale}
@@ -76,7 +71,6 @@ export function UkuleleChord({ chord, isDark = false, scale = 1 }: UkuleleChordP
           </text>
         )}
 
-        {/* Draw frets */}
         {Array.from({ length: numFrets + 1 }).map((_, fretIndex) => {
           const y = topMargin + fretIndex * fretHeight;
           const strokeWidth = (fretIndex === 0 && baseFret === 1 ? 3 : 1) * scale;
@@ -93,7 +87,6 @@ export function UkuleleChord({ chord, isDark = false, scale = 1 }: UkuleleChordP
           );
         })}
 
-        {/* Draw strings */}
         {Array.from({ length: numStrings }).map((_, stringIndex) => {
           const x = leftMargin + stringIndex * stringSpacing;
           return (
@@ -109,17 +102,14 @@ export function UkuleleChord({ chord, isDark = false, scale = 1 }: UkuleleChordP
           );
         })}
 
-        {/* Draw barres (adjusted for ukulele) */}
         {barres.map((barre, index) => {
           const fretNum = barre.fret - displayBaseFret + 1;
           if (fretNum < 0 || fretNum > numFrets) return null;
 
-          // Only show barre within the 4 ukulele strings
           const startString = Math.min(barre.startString, numStrings - 1);
           const lastString = Math.min(barre.lastString, numStrings - 1);
 
           const y = topMargin + (fretNum - 0.5) * fretHeight;
-          // Reverse the barre positions to match reversed strings
           const x1 = leftMargin + (numStrings - 1 - lastString) * stringSpacing;
           const x2 = leftMargin + (numStrings - 1 - startString) * stringSpacing;
 
@@ -139,13 +129,10 @@ export function UkuleleChord({ chord, isDark = false, scale = 1 }: UkuleleChordP
           );
         })}
 
-        {/* Draw finger positions and open/muted indicators */}
-        {ukuleleFrets.map((fret, stringIndex) => {
-          // Reverse the string order (high A on left, low G on right)
+        {banjoFrets.map((fret, stringIndex) => {
           const displayIndex = numStrings - 1 - stringIndex;
           const x = leftMargin + displayIndex * stringSpacing;
 
-          // Muted string (x)
           if (fret === -1) {
             return (
               <g key={`string-${stringIndex}-indicator`}>
@@ -169,7 +156,6 @@ export function UkuleleChord({ chord, isDark = false, scale = 1 }: UkuleleChordP
             );
           }
 
-          // Open string (o)
           if (fret === 0) {
             return (
               <circle
@@ -184,7 +170,6 @@ export function UkuleleChord({ chord, isDark = false, scale = 1 }: UkuleleChordP
             );
           }
 
-          // Finger position
           const fretNum = fret - displayBaseFret + 1;
           if (fretNum < 0 || fretNum > numFrets) return null;
 
@@ -193,7 +178,7 @@ export function UkuleleChord({ chord, isDark = false, scale = 1 }: UkuleleChordP
           return (
             <g key={`string-${stringIndex}-dot`}>
               <circle cx={x} cy={y} r={7 * scale} fill={dotColor} />
-              {ukuleleFingers[stringIndex] > 0 && (
+              {banjoFingers[stringIndex] > 0 && (
                 <text
                   x={x}
                   y={y + 1 * scale}
@@ -205,7 +190,7 @@ export function UkuleleChord({ chord, isDark = false, scale = 1 }: UkuleleChordP
                     fill: isDark ? "#000000" : "#ffffff",
                   }}
                 >
-                  {ukuleleFingers[stringIndex]}
+                  {banjoFingers[stringIndex]}
                 </text>
               )}
             </g>
