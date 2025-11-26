@@ -420,6 +420,13 @@ export default function PlaylistDetailPage() {
     [],
   );
 
+  const handleClearSearch = useCallback(() => {
+    setSearch("");
+    if (searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  }, []);
+
   const TopSongsTooltip = useMemo(() => {
     const Component = (tooltipProps: ChartsTooltipProps) => {
       const tooltipItem = useItemTooltip<'bar'>();
@@ -862,14 +869,24 @@ export default function PlaylistDetailPage() {
             Songs
           </div>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-            <input
-              type="search"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by title or artist"
-              ref={searchInputRef}
-              className="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm outline-none ring-0 transition focus:border-zinc-400 dark:border-white/15 dark:bg-black dark:text-white dark:focus:border-white/60 sm:w-72"
-            />
+            <div className="flex w-full items-center gap-2 sm:w-72">
+              <input
+                type="search"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search by title or artist"
+                ref={searchInputRef}
+                className="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm outline-none ring-0 transition focus:border-zinc-400 dark:border-white/15 dark:bg-black dark:text-white dark:focus:border-white/60"
+              />
+              <button
+                type="button"
+                onClick={handleClearSearch}
+                disabled={!search}
+                className="inline-flex items-center justify-center rounded-md border border-zinc-300 bg-white px-2 py-1 text-xs font-medium text-zinc-600 transition hover:bg-zinc-50 disabled:opacity-40 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
+              >
+                Clear
+              </button>
+            </div>
           </div>
         </div>
 
