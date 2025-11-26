@@ -1046,7 +1046,7 @@ export default function PlaylistDetailPage() {
                                   Refreshing
                                 </>
                               ) : (
-                                <>Refresh tab</>
+                                <>Cache tab</>
                               )}
                             </button>
                           </div>

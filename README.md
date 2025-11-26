@@ -26,10 +26,11 @@ The app is designed to be:
 
 - **Playlist detail / setlist view** (`/playlists/[playlistId]`)
   - Shows all songs in a playlist with search by title or artist.
+  - Click an artist name to instantly filter that playlist to the artist's songs, with a one-tap **Clear search** button to reset.
   - Column reordering + resizing with layout persisted to `localStorage`.
   - Play count and last played date columns for tracking progress.
   - Quick links to Spotify and YouTube for each song (when available).
-  - Links into the song/tab view for each track.
+  - Links into the song/tab view for each track and a **Cache tab** action to refresh stored tabs without leaving the playlist.
   - **Per-playlist charts & statistics**:
     - **Top 10 Played Songs** – horizontal bar chart with custom legends (click to navigate to song).
     - **Top 10 Played Artists** – donut chart with aggregated play counts from playlist songs.
@@ -41,6 +42,7 @@ The app is designed to be:
   - **Mark as played** button to track play count and last played timestamp.
   - Adjustable font size (+/- controls, persisted per device).
   - Optional auto-scroll with configurable speed (0.1x – 3.0x).
+  - **Local tab caching** – once a tab loads it is stored in `localStorage`, so revisiting the same song is instant unless you explicitly refresh from the playlist table.
   - Per-song notes panel (for cues, capo info, reminders, etc.).
   - Displays tuning information and tab type (chords, tab, pro).
   - Ability to collapse the header for a focused performance view.
