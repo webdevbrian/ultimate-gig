@@ -29,8 +29,13 @@ export function BanjoChord({ chord, isDark = false, scale = 1 }: BanjoChordProps
   const dotColor = isDark ? "#ffffff" : "#000000";
   const barreColor = isDark ? "#ffffff" : "#000000";
 
-  const banjoFrets = frets.slice(0, numStrings);
-  const banjoFingers = fingers.slice(0, numStrings);
+  // Map guitar strings (low E to high E) to banjo Open G order (g D G B D)
+  // Guitar indices: [0:E2,1:A2,2:D3,3:G3,4:B3,5:E4]
+  // Banjo order: 5th string high g (G3) -> guitar index 3, then D string -> index 2,
+  // G string -> index 3 (reuse, but treat as same pitch), B string -> index 4, D string -> index 2.
+  const banjoSourceIndices = [3, 2, 3, 4, 2];
+  const banjoFrets = banjoSourceIndices.map((index) => frets[index] ?? -1);
+  const banjoFingers = banjoSourceIndices.map((index) => fingers[index] ?? 0);
 
   const displayBaseFret = baseFret > 1 ? baseFret : 1;
 

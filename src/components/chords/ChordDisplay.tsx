@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import type { UgChordShape } from "@/lib/models";
 import { GuitarChord } from "./GuitarChord";
 import { UkuleleChord } from "./UkuleleChord";
@@ -16,7 +15,10 @@ interface ChordDisplayProps {
 type InstrumentType = "guitar" | "ukulele" | "banjo" | "piano";
 
 export function ChordDisplay({ chordShapes, isDark = false }: ChordDisplayProps) {
-  const [instrument, setInstrument] = useState<InstrumentType>("guitar");
+  const [instrument, setInstrument] = useLocalStorage<InstrumentType>(
+    "ultimate-gig:ui:chord-instrument",
+    "ukulele",
+  );
   const [scale, setScale, hasHydrated] = useLocalStorage<number>(
     "ultimate-gig:ui:chord-scale",
     1,
@@ -55,13 +57,6 @@ export function ChordDisplay({ chordShapes, isDark = false }: ChordDisplayProps)
         <div className="flex gap-2">
           <button
             type="button"
-            onClick={() => setInstrument("guitar")}
-            className={buttonClass(instrument === "guitar")}
-          >
-            Guitar
-          </button>
-          <button
-            type="button"
             onClick={() => setInstrument("ukulele")}
             className={buttonClass(instrument === "ukulele")}
           >
@@ -73,6 +68,13 @@ export function ChordDisplay({ chordShapes, isDark = false }: ChordDisplayProps)
             className={buttonClass(instrument === "banjo")}
           >
             Banjo
+          </button>
+          <button
+            type="button"
+            onClick={() => setInstrument("guitar")}
+            className={buttonClass(instrument === "guitar")}
+          >
+            Guitar
           </button>
           <button
             type="button"

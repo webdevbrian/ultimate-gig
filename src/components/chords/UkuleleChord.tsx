@@ -31,9 +31,10 @@ export function UkuleleChord({ chord, isDark = false, scale = 1 }: UkuleleChordP
   const dotColor = isDark ? "#ffffff" : "#000000";
   const barreColor = isDark ? "#ffffff" : "#000000";
 
-  // Only use first 4 strings for ukulele (G C E A)
-  const ukuleleFrets = frets.slice(0, 4);
-  const ukuleleFingers = fingers.slice(0, 4);
+  // Map guitar-based frets to ukulele standard tuning (C E A with re-entrant G)
+  const ukuleleSourceIndices = [2, 4, 5, 3]; // approx: C, E, A, high G
+  const ukuleleFrets = ukuleleSourceIndices.map((index) => frets[index] ?? -1);
+  const ukuleleFingers = ukuleleSourceIndices.map((index) => fingers[index] ?? 0);
 
   const displayBaseFret = baseFret > 1 ? baseFret : 1;
 

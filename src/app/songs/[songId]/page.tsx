@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { SpotifyIcon } from "@/components/icons/SpotifyIcon";
 import { YoutubeIcon } from "@/components/icons/YoutubeIcon";
 import { ChordDisplay } from "@/components/chords/ChordDisplay";
@@ -60,6 +60,7 @@ export default function SongDetailPage() {
     "ultimate-gig:ui:chords-visible",
     true,
   );
+  const [chordScale] = useLocalStorage<number>("ultimate-gig:ui:chord-scale", 1);
   const [mediaLinkInput, setMediaLinkInput] = useState("");
   const [mediaStatus, setMediaStatus] = useState<
     | { type: "success"; message: string }
@@ -69,6 +70,7 @@ export default function SongDetailPage() {
   const [justMarkedAsPlayed, setJustMarkedAsPlayed] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+  const sectionObserverRef = useRef<ResizeObserver | null>(null);
   const subtleActionButtonClass =
     "inline-flex items-center justify-center rounded border border-zinc-300 bg-white px-2 py-0.5 text-[11px] font-medium text-zinc-700 shadow-sm transition hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800";
 
@@ -79,12 +81,16 @@ export default function SongDetailPage() {
     if (!container) return;
 
     const rect = container.getBoundingClientRect();
-    const viewportHeight = window.innerHeight;
-    const available = viewportHeight - rect.top - 16;
+    const viewport = window.visualViewport;
+    const viewportHeight = viewport?.height ?? window.innerHeight;
+    const viewportOffsetTop = viewport?.offsetTop ?? 0;
+    const available = viewportHeight + viewportOffsetTop - rect.top - 16;
 
     if (available > 0) {
+      container.style.height = `${available}px`;
       container.style.maxHeight = `${available}px`;
     } else {
+      container.style.removeProperty("height");
       container.style.removeProperty("max-height");
     }
   }, []);
@@ -93,6 +99,25 @@ export default function SongDetailPage() {
     (node: HTMLDivElement | null) => {
       scrollContainerRef.current = node;
       if (node) {
+        updateScrollContainerHeight();
+      }
+    },
+    [updateScrollContainerHeight],
+  );
+
+  const setSectionRef = useCallback(
+    (node: HTMLElement | null) => {
+      if (sectionObserverRef.current) {
+        sectionObserverRef.current.disconnect();
+        sectionObserverRef.current = null;
+      }
+
+      if (node && typeof window !== "undefined" && "ResizeObserver" in window) {
+        const observer = new ResizeObserver(() => {
+          updateScrollContainerHeight();
+        });
+        observer.observe(node);
+        sectionObserverRef.current = observer;
         updateScrollContainerHeight();
       }
     },
@@ -387,23 +412,52 @@ export default function SongDetailPage() {
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    const rafId = window.requestAnimationFrame(updateScrollContainerHeight);
     window.addEventListener("resize", updateScrollContainerHeight);
+    return () => {
+      window.removeEventListener("resize", updateScrollContainerHeight);
+    };
+  }, [updateScrollContainerHeight]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const viewport = window.visualViewport;
+    if (!viewport) return;
+
+    const handler = () => updateScrollContainerHeight();
+    viewport.addEventListener("resize", handler);
+    viewport.addEventListener("scroll", handler);
 
     return () => {
+      viewport.removeEventListener("resize", handler);
+      viewport.removeEventListener("scroll", handler);
+    };
+  }, [updateScrollContainerHeight]);
+
+  useLayoutEffect(() => {
+    if (typeof window === "undefined") return;
+    updateScrollContainerHeight();
+    const rafId = window.requestAnimationFrame(updateScrollContainerHeight);
+    return () => {
       window.cancelAnimationFrame(rafId);
-      window.removeEventListener("resize", updateScrollContainerHeight);
     };
   }, [
     controlsCollapsed,
     notesOpen,
     mediaLinkOpen,
     chordsVisible,
+    chordScale,
     rawTabText,
     isLoading,
     song?.id,
+    tab?.chordShapes,
     updateScrollContainerHeight,
   ]);
+
+  useEffect(() => {
+    return () => {
+      sectionObserverRef.current?.disconnect();
+    };
+  }, []);
 
   const increaseFontSize = () => {
     setTabFontSize((current) => {
@@ -641,7 +695,10 @@ export default function SongDetailPage() {
         )}
       </div>
 
-      <section className="flex min-h-0 flex-1 w-full flex-col space-y-3 rounded-lg border border-black/5 bg-white/80 p-4 text-sm shadow-sm dark:border-white/10 dark:bg-black/60">
+      <section
+        ref={setSectionRef}
+        className="flex min-h-0 flex-1 w-full flex-col space-y-3 rounded-lg border border-black/5 bg-white/80 p-4 text-sm shadow-sm dark:border-white/10 dark:bg-black/60"
+      >
         <div className="flex flex-wrap items-center justify-between gap-3 text-[11px] text-zinc-600 dark:text-zinc-400">
           <div className="flex items-center gap-2">
             <button
@@ -759,7 +816,7 @@ export default function SongDetailPage() {
                       Open on Ultimate Guitar
                     </a>
                     <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                      You'll need a Guitar Pro subscription or the Guitar Pro software to view this tab
+                      You&apos;ll need a Guitar Pro subscription or the Guitar Pro software to view this tab
                     </p>
                   </div>
                 </>
