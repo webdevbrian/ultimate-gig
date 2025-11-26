@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useMemo, useState, useEffect, useCallback } from "react";
+import { useMemo, useState, useEffect, useCallback, useRef } from "react";
 import { Table, useTable } from "ka-table";
 import { DataType, SortingMode } from "ka-table/enums";
 import { BarChart } from '@mui/x-charts/BarChart';
@@ -153,6 +153,7 @@ export default function PlaylistDetailPage() {
     : undefined;
 
   const [search, setSearch] = useState("");
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
   const [songsTableState, setSongsTableState] = useLocalStorage<TableStateSnapshot>(
     "ultimate-gig:ui:playlist-songs-table",
     {},
@@ -406,6 +407,17 @@ export default function PlaylistDetailPage() {
       }
     },
     [setTabCache],
+  );
+
+  const handleArtistFilter = useCallback(
+    (artistName: string) => {
+      setSearch(artistName);
+      if (searchInputRef.current) {
+        searchInputRef.current.focus();
+        searchInputRef.current.select();
+      }
+    },
+    [],
   );
 
   const TopSongsTooltip = useMemo(() => {
@@ -844,7 +856,7 @@ export default function PlaylistDetailPage() {
         </section>
       )}
 
-      <section className="space-y-3">
+      <section className="space-y-3 pb-8">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
             Songs
@@ -855,6 +867,7 @@ export default function PlaylistDetailPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search by title or artist"
+              ref={searchInputRef}
               className="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm outline-none ring-0 transition focus:border-zinc-400 dark:border-white/15 dark:bg-black dark:text-white dark:focus:border-white/60 sm:w-72"
             />
           </div>
@@ -934,6 +947,18 @@ export default function PlaylistDetailPage() {
                 },
                 cellText: {
                   content: (props) => {
+                    if (props.column.key === "artist") {
+                      const row = props.rowData as (typeof data)[number];
+                      return (
+                        <button
+                          type="button"
+                          onClick={() => handleArtistFilter(row.artist)}
+                          className="text-left text-zinc-700 underline-offset-2 hover:text-zinc-900 hover:underline dark:text-zinc-200 dark:hover:text-white"
+                        >
+                          {row.artist}
+                        </button>
+                      );
+                    }
                     if (props.column.key === "title") {
                       const row = props.rowData as (typeof data)[number];
                       const isRefreshing = refreshingTabIds.has(row.songId);
