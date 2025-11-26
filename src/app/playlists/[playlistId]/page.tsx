@@ -277,16 +277,26 @@ export default function PlaylistDetailPage() {
         };
       });
 
+    const formatLocalDateKey = (date: Date) => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    };
+
     // Play activity over time (last 30 days)
     const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setHours(0, 0, 0, 0);
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
     const dailyPlays = playedSongs
-      .filter(song => song.lastPlayedAt && new Date(song.lastPlayedAt) >= thirtyDaysAgo)
+      .filter((song) => song.lastPlayedAt)
       .reduce((acc, song) => {
         if (!song.lastPlayedAt) return acc;
-        const date = new Date(song.lastPlayedAt).toISOString().split('T')[0];
-        acc[date] = (acc[date] || 0) + (song.playCount || 0);
+        const lastPlayed = new Date(song.lastPlayedAt);
+        if (lastPlayed < thirtyDaysAgo) return acc;
+        const dateKey = formatLocalDateKey(lastPlayed);
+        acc[dateKey] = (acc[dateKey] || 0) + 1;
         return acc;
       }, {} as Record<string, number>);
 
@@ -294,8 +304,9 @@ export default function PlaylistDetailPage() {
     const activityData: ActivityDatum[] = [];
     for (let i = 29; i >= 0; i--) {
       const date = new Date();
+      date.setHours(0, 0, 0, 0);
       date.setDate(date.getDate() - i);
-      const dateStr = date.toISOString().split('T')[0];
+      const dateStr = formatLocalDateKey(date);
       activityData.push({
         date: dateStr,
         plays: dailyPlays[dateStr] || 0,
